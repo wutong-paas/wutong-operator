@@ -282,6 +282,9 @@ func (n *node) daemonSetForWutongNode() client.Object {
 	if n.containerRuntime == containerutil.ContainerRuntimeDocker {
 		runtimeVolumes, runtimeVolumeMounts = n.getDockerVolumes()
 		args = append(args, "--container-runtime=docker")
+	} else {
+		args = append(args, "--container-runtime=containerd")
+		args = append(args, "--runtime-endpoint=/run/containerd/containerd.sock")
 	}
 	volumes = append(volumes, runtimeVolumes...)
 	volumeMounts = append(volumeMounts, runtimeVolumeMounts...)
@@ -319,7 +322,7 @@ func (n *node) daemonSetForWutongNode() client.Object {
 	}
 	if n.cluster.Spec.ImageHub == nil || n.cluster.Spec.ImageHub.Domain == constants.DefImageRepository {
 		envs = append(envs, corev1.EnvVar{
-			Name:  "WT_DOCKER_SECRET",
+			Name:  "WT_REGISTRY_SECRET",
 			Value: hubImageRepository,
 		})
 	}
