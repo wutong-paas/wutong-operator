@@ -9,7 +9,7 @@
 # 3. docker login myhuaweicloud-swr
 
 export NAMESPACE=wutong-operator
-export VERSION=v1.3.0
+export VERSION=v1.4.0
 # docker buildx create --use --name operatorbuilder
 docker buildx use operatorbuilder
 # docker buildx build --platform linux/amd64,linux/arm64 --push -t wutongpaas/${NAMESPACE}:${VERSION} -f Dockerfile.multiarch . 
