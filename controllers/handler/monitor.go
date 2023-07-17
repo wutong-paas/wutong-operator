@@ -90,7 +90,6 @@ func (m *monitor) statefulset() client.Object {
 
 	args := []string{
 		"--advertise-addr=$(POD_IP):9999",
-		"--alertmanager-address=$(POD_IP):9093",
 		"--storage.tsdb.path=/prometheusdata",
 		"--storage.tsdb.no-lockfile",
 		"--storage.tsdb.retention=7d",
