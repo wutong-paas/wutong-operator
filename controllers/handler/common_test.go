@@ -262,15 +262,12 @@ type dummyStorageClass struct {
 
 func TestMergeArgs(t *testing.T) {
 	commonArgs := []string{
-		"--alertmanager-address=$(POD_IP):9093",
 		"--storage.tsdb.no-lockfile",
 	}
 	priorityArgs := []string{
-		"--alertmanager-address=127.0.0.1:9093",
 		"--log-level=debug",
 	}
 	expectArgs := []string{
-		"--alertmanager-address=127.0.0.1:9093",
 		"--storage.tsdb.no-lockfile",
 		"--log-level=debug",
 	}
