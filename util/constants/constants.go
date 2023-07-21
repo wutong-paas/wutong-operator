@@ -36,6 +36,13 @@ const (
 	// ServiceAccountName is the name of service account
 	ServiceAccountName = "wutong-operator"
 
+	// WutongClusterSettingsConfigMapName is the name of wutong cluster settings configmap
+	WutongClusterSettingsConfigMapName      = "wutong-cluster-settings"
+	WutongClusterCurrentInstalledVersionKey = "CurrentWutongClusterInstalledVersion"
+
 	// InstallImageRepo install image repo
 	InstallImageRepo = "swr.cn-southwest-2.myhuaweicloud.com/wutong"
+
+	// DefaultInstallVersion default install version
+	DefaultInstallVersion = "v1.4.0"
 )

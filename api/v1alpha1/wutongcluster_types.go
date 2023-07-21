@@ -148,6 +148,8 @@ type WutongClusterSpec struct {
 
 	CacheMode string `json:"cacheMode,omitempty"`
 	// Arch is the server architecture of the cluster. It's ptional, default is amd64, support arm64
+	//
+	// Deprecated: arch is deprecated because it's not used anymore.
 	Arch string `json:"arch,omitempty"`
 	// Light weight is a mode that only install the necessary components of wutong
 	Lightweight bool `json:"lightweight,omitempty"`

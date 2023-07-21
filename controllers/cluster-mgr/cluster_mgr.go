@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -73,6 +74,8 @@ type WutongClusteMgr struct {
 	log    logr.Logger
 
 	cluster *wutongv1alpha1.WutongCluster
+	sclist  []*wutongv1alpha1.StorageClass // storage class list
+	defsc   string                         // default storage class
 }
 
 // NewClusterMgr new Cluster Mgr
@@ -84,10 +87,12 @@ func NewClusterMgr(ctx context.Context, client client.Client, log logr.Logger, c
 		cluster: cluster,
 		scheme:  scheme,
 	}
+	mgr.setStorageStorageClasses()
 	return mgr
 }
 
-func (r *WutongClusteMgr) listStorageClasses() []*wutongv1alpha1.StorageClass {
+// setStorageStorageClasses set sclist and defsc for WutongClusteMgr
+func (r *WutongClusteMgr) setStorageStorageClasses() {
 	r.log.V(6).Info("start listing available storage classes")
 
 	storageClassList := &storagev1.StorageClassList{}
@@ -96,11 +101,15 @@ func (r *WutongClusteMgr) listStorageClasses() []*wutongv1alpha1.StorageClass {
 	defer cancel()
 	if err := r.client.List(ctx, storageClassList, opts...); err != nil {
 		r.log.Error(err, "list storageclass")
-		return nil
+		return
 	}
 
 	var storageClasses []*wutongv1alpha1.StorageClass
 	for _, sc := range storageClassList.Items {
+		v, ok := sc.Annotations["storageclass.kubernetes.io/is-default-class"]
+		if ok && v == "true" {
+			r.defsc = sc.Name
+		}
 		storageClass := &wutongv1alpha1.StorageClass{
 			Name:        sc.Name,
 			Provisioner: sc.Provisioner,
@@ -109,7 +118,45 @@ func (r *WutongClusteMgr) listStorageClasses() []*wutongv1alpha1.StorageClass {
 		storageClasses = append(storageClasses, storageClass)
 	}
 	r.log.V(6).Info("listing available storage classes success")
-	return storageClasses
+	r.sclist = storageClasses
+}
+
+// CheckOrUpdateWutongCluster return update or not and error
+func (r *WutongClusteMgr) CheckOrUpdateWutongCluster() (bool, error) {
+	update := false
+	// set default storage class for rwx
+	if r.cluster.Spec.WutongVolumeSpecRWX == nil {
+		r.cluster.Spec.WutongVolumeSpecRWX = &wutongv1alpha1.WutongVolumeSpec{
+			StorageClassName: r.defsc,
+		}
+		update = true
+	} else {
+		if r.cluster.Spec.WutongVolumeSpecRWX.StorageClassName == "" {
+			r.cluster.Spec.WutongVolumeSpecRWX.StorageClassName = r.defsc
+			update = true
+		}
+	}
+
+	if r.cluster.Spec.InstallVersion == "" {
+		r.cluster.Spec.InstallVersion = constants.DefaultInstallVersion
+		update = true
+	}
+
+	if update {
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			rc := &wutongv1alpha1.WutongCluster{}
+			if err := r.client.Get(r.ctx, types.NamespacedName{Name: r.cluster.Name, Namespace: r.cluster.Namespace}, rc); err != nil {
+				return err
+			}
+			rc.Spec = r.cluster.Spec
+			return r.client.Update(r.ctx, rc)
+		}); err != nil {
+			r.log.Error(err, "update wutongcluster status")
+			return update, err
+		}
+	}
+
+	return update, nil
 }
 
 // GenerateWutongClusterStatus creates the final WutongCluster status for a WutongCluster, given the
@@ -124,7 +171,7 @@ func (r *WutongClusteMgr) GenerateWutongClusterStatus() (*wutongv1alpha1.WutongC
 
 	s := &wutongv1alpha1.WutongClusterStatus{
 		MasterRoleLabel: masterRoleLabel,
-		StorageClasses:  r.listStorageClasses(),
+		StorageClasses:  r.sclist,
 	}
 
 	if r.checkIfImagePullSecretExists() {
@@ -342,7 +389,7 @@ func (r *WutongClusteMgr) generateConditions() []wutongv1alpha1.WutongClusterCon
 		r.cluster.Status.UpdateCondition(&condition)
 	}
 
-	storagePreChecker := precheck.NewStorage(r.ctx, r.client, r.cluster.GetNamespace(), r.cluster.Spec.WutongVolumeSpecRWX)
+	storagePreChecker := precheck.NewStorage(r.ctx, r.client, r.cluster.GetNamespace(), r.cluster.Spec.WutongVolumeSpecRWX, r.defsc)
 	storageCondition := storagePreChecker.Check()
 	r.cluster.Status.UpdateCondition(&storageCondition)
 

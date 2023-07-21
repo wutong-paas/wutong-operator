@@ -2,7 +2,7 @@ name: commit-ci
 
 env:
   TITLE: wutong-operator
-  BASE_VERSION: v1.4.0
+  BASE_VERSION: v1.4.0-beta1
 
 on:
   push:
@@ -31,15 +31,18 @@ jobs:
           registry: ${{ secrets.DOMESTIC_DOCKER_SERVER }}
           username: ${{ secrets.DOMESTIC_DOCKER_USERNAME }}
           password: ${{ secrets.DOMESTIC_DOCKER_PASSWORD }}
+      
+      - name: Build
+        run: ./build.sh
 
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v3
-        with:
-          platforms: linux/amd64,linux/arm64
-          file: Dockerfile.multiarch
-          push: true
-          tags: ${{ secrets.DOMESTIC_DOCKER_SERVER }}/wutong/${{ env.TITLE }}:${{ env.BASE_VERSION }}
+      # - name: Build and push
+      #   id: docker_build
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     platforms: linux/amd64,linux/arm64
+      #     file: Dockerfile.multiarch
+      #     push: true
+      #     tags: ${{ secrets.DOMESTIC_DOCKER_SERVER }}/wutong/${{ env.TITLE }}:${{ env.BASE_VERSION }}
 
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+      # - name: Image digest
+      #   run: echo ${{ steps.docker_build.outputs.digest }}
