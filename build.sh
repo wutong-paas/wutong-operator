@@ -1,7 +1,7 @@
 #! /bin/bash
 
 export NAMESPACE=wutong-operator
-export VERSION=v1.4.0-alpha1
+export VERSION=v1.4.0
 
 go mod download
 
