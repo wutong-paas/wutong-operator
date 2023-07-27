@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 
@@ -428,10 +427,8 @@ func (a *api) ingressForAPI() client.Object {
 		"nginx.ingress.kubernetes.io/l4-port":   "8443",
 	}
 	if k8sutil.GetKubeVersion().AtLeast(utilversion.MustParseSemantic("v1.19.0")) {
-		logrus.Info("create networking v1 ingress for api")
 		return createIngress(APIName, a.component.Namespace, annotations, a.labels, APIName+"-api", "https")
 	}
-	logrus.Info("create networking beta v1 ingress for api")
 	return createLegacyIngress(APIName, a.component.Namespace, annotations, a.labels, APIName+"-api", intstr.FromString("https"))
 }
 
@@ -442,10 +439,8 @@ func (a *api) ingressForAPIHealthz() client.Object {
 		"nginx.ingress.kubernetes.io/l4-port":   "8889",
 	}
 	if k8sutil.GetKubeVersion().AtLeast(utilversion.MustParseSemantic("v1.19.0")) {
-		logrus.Info("create networking v1 ingress for healthz")
 		return createIngress(APIName+"-healthz", a.component.Namespace, annotations, a.labels, APIName+"-healthz", "healthz")
 	}
-	logrus.Info("create networking beta v1 ingress for healthz")
 	return createLegacyIngress(APIName+"-healthz", a.component.Namespace, annotations, a.labels, APIName+"-api-inner", intstr.FromString("healthz"))
 }
 
@@ -456,9 +451,7 @@ func (a *api) ingressForWebsocket() client.Object {
 		"nginx.ingress.kubernetes.io/l4-port":   "6060",
 	}
 	if k8sutil.GetKubeVersion().AtLeast(utilversion.MustParseSemantic("v1.19.0")) {
-		logrus.Info("create networking v1 ingress for websocket")
 		return createIngress(APIName+"-websocket", a.component.Namespace, annotations, a.labels, APIName+"-websocket", "ws")
 	}
-	logrus.Info("create networking beta v1 ingress for websocket")
 	return createLegacyIngress(APIName+"-websocket", a.component.Namespace, annotations, a.labels, APIName+"-websocket", intstr.FromString("ws"))
 }
