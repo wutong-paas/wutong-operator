@@ -44,5 +44,5 @@ const (
 	InstallImageRepo = "swr.cn-southwest-2.myhuaweicloud.com/wutong"
 
 	// DefaultInstallVersion default install version
-	DefaultInstallVersion = "v1.4.0"
+	DefaultInstallVersion = "v1.5.0"
 )

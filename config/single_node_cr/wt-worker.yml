@@ -13,10 +13,10 @@ spec:
     - name: ALLINONE_MODE
       value: "true"
     - name: TCPMESH_DEFAULT_IMAGE_NAME
-      value: "swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-mesh-data-panel:v1.4.0"
+      value: "swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-mesh-data-panel:v1.5.0"
     - name: PROBE_MESH_IMAGE_NAME
-      value: "swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-init-probe:v1.4.0"
+      value: "swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-init-probe:v1.5.0"
   replicas: 1
-  image: swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-worker:v1.4.0
+  image: swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-worker:v1.5.0
   imagePullPolicy: IfNotPresent
   priorityComponent: false
