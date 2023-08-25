@@ -34,7 +34,6 @@ type db struct {
 	component *wutongv1alpha1.WutongComponent
 	cluster   *wutongv1alpha1.WutongCluster
 	labels    map[string]string
-	affinity  *corev1.VolumeNodeAffinity
 
 	secret                   *corev1.Secret
 	mysqlUser, mysqlPassword string
@@ -92,12 +91,6 @@ func (d *db) Before() error {
 	if err := setStorageCassName(d.ctx, d.client, d.component.Namespace, d); err != nil {
 		return err
 	}
-
-	affinity, err := nodeAffnityNodesForChaos(d.cluster)
-	if err != nil {
-		return err
-	}
-	d.affinity = affinity
 
 	return nil
 }
@@ -413,58 +406,3 @@ skip-name-resolve
 
 	return cm
 }
-
-// func (d *db) pv() *corev1.PersistentVolume {
-// 	pv := &corev1.PersistentVolume{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:   DBName,
-// 			Labels: d.labels,
-// 		},
-// 	}
-
-// 	size := resource.NewQuantity(1*1024*1024*1024, resource.BinarySI)
-// 	spec := corev1.PersistentVolumeSpec{
-// 		AccessModes: []corev1.PersistentVolumeAccessMode{
-// 			corev1.ReadWriteOnce,
-// 		},
-// 		Capacity: corev1.ResourceList{
-// 			corev1.ResourceStorage: *size,
-// 		},
-// 		StorageClassName: "manual",
-// 	}
-
-// 	spec.NodeAffinity = d.affinity
-
-// 	hostPath := &corev1.HostPathVolumeSource{
-// 		Path: "/opt/wutong/data/db" + time.Now().Format("20060102150405"),
-// 		Type: k8sutil.HostPath(corev1.HostPathDirectoryOrCreate),
-// 	}
-// 	spec.HostPath = hostPath
-
-// 	pv.Spec = spec
-
-// 	return pv
-// }
-
-// func (d *db) pvc() *corev1.PersistentVolumeClaim {
-// 	size := resource.NewQuantity(1*1024*1024*1024, resource.BinarySI)
-// 	pvc := &corev1.PersistentVolumeClaim{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:   DBName,
-// 			Labels: d.labels,
-// 		},
-// 		Spec: corev1.PersistentVolumeClaimSpec{
-// 			AccessModes: []corev1.PersistentVolumeAccessMode{
-// 				corev1.ReadWriteOnce,
-// 			},
-// 			Resources: corev1.ResourceRequirements{
-// 				Requests: map[corev1.ResourceName]resource.Quantity{
-// 					corev1.ResourceStorage: *size,
-// 				},
-// 			},
-// 			VolumeName:       DBName,
-// 			StorageClassName: commonutil.String("manual"),
-// 		},
-// 	}
-// 	return pvc
-// }
