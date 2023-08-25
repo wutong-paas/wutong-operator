@@ -6,6 +6,7 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/pelletier/go-toml"
 )
 
 // ContainerdAPI -
@@ -16,13 +17,21 @@ type ContainerdAPI struct {
 }
 
 func InitContainerd() (*ContainerdAPI, error) {
-	containerdClient, err := containerd.New("/run/containerd/containerd.sock")
+	// 通过读取配置文件，获取 containerd 的 socket 地址
+	containerdConf, err := toml.LoadFile("/etc/containerd/config.toml")
 	if err != nil {
-		containerdClient, err = containerd.New("/var/run/docker/containerd/containerd.sock")
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
+	address := containerdConf.Get("grpc.address").(string)
+	if address == "" {
+		return nil, err
+	}
+
+	containerdClient, err := containerd.New(address)
+	if err != nil {
+		return nil, err
+	}
+
 	cctx := namespaces.WithNamespace(context.Background(), "k8s.io")
 	imageService := containerdClient.ImageService()
 	return &ContainerdAPI{
