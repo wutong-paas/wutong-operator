@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -247,4 +248,44 @@ func GetKubeVersion() *utilversion.Version {
 		return utilversion.MustParseSemantic("v1.19.6")
 	}
 	return utilversion.MustParseSemantic(serverVersion.GitVersion)
+}
+
+func ListMasterNodes() []*wutongv1alpha1.K8sNode {
+	return listNodesByLabels()
+}
+
+func listNodesByLabels() []*wutongv1alpha1.K8sNode {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	nodeList, err := GetClientSet().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil
+	}
+
+	findIP := func(addresses []corev1.NodeAddress, addressType corev1.NodeAddressType) string {
+		for _, address := range addresses {
+			if address.Type == addressType {
+				return address.Address
+			}
+		}
+		return ""
+	}
+
+	var k8sNodes []*wutongv1alpha1.K8sNode
+	for _, node := range nodeList.Items {
+		_, ok := node.Labels["node-role.kubernetes.io/control-plane"]
+		if !ok {
+			if _, ok = node.Labels["node-role.kubernetes.io/master"]; !ok {
+				continue
+			}
+		}
+		k8sNode := &wutongv1alpha1.K8sNode{
+			Name:       node.Name,
+			InternalIP: findIP(node.Status.Addresses, corev1.NodeInternalIP),
+			ExternalIP: findIP(node.Status.Addresses, corev1.NodeExternalIP),
+		}
+		k8sNodes = append(k8sNodes, k8sNode)
+	}
+
+	return k8sNodes
 }

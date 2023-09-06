@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/wutong-paas/wutong-operator/util/containerutil"
+	init_containerd "github.com/wutong-paas/wutong-operator/util/init-containerd"
 	"github.com/wutong-paas/wutong-operator/util/probeutil"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
 
@@ -186,14 +187,11 @@ func (c *chaos) deployment() client.Object {
 		volumes = append(volumes, volume)
 		args = append(args, "--container-runtime=docker")
 	} else {
-		socketVolume, socketMount := volumeByContainerdSocket()
-		configVolume, configMount := volumeByContainerdConfig()
-		volumeMounts = append(volumeMounts, socketMount)
-		volumeMounts = append(volumeMounts, configMount)
-		volumes = append(volumes, socketVolume)
-		volumes = append(volumes, configVolume)
+		vs, vms := volumesByContainerd()
+		volumeMounts = append(volumeMounts, vms...)
+		volumes = append(volumes, vs...)
 		args = append(args, "--container-runtime=containerd")
-		args = append(args, "--runtime-endpoint=/run/containerd/containerd.sock")
+		args = append(args, "--runtime-endpoint="+init_containerd.GetRuntimeSocketAddress())
 	}
 
 	if c.etcdSecret != nil {
@@ -415,36 +413,56 @@ func (c *chaos) defaultMavenSetting() *corev1.ConfigMap {
 	}
 }
 
-func volumeByContainerdSocket() (corev1.Volume, corev1.VolumeMount) {
-	volume := corev1.Volume{
+func volumesByContainerd() ([]corev1.Volume, []corev1.VolumeMount) {
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
+
+	var containerdSockAddress = init_containerd.GetRuntimeSocketAddress()
+	volumes = append(volumes, corev1.Volume{
 		Name: "containerdsock",
 		VolumeSource: corev1.VolumeSource{
 			HostPath: &corev1.HostPathVolumeSource{
-				Path: "/run/containerd/containerd.sock",
+				Path: containerdSockAddress,
 			},
 		},
-	}
-	mount := corev1.VolumeMount{
+	})
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
 		Name:      "containerdsock",
-		MountPath: "/run/containerd/containerd.sock",
-	}
-	return volume, mount
-}
+		MountPath: containerdSockAddress,
+	})
 
-func volumeByContainerdConfig() (corev1.Volume, corev1.VolumeMount) {
-	volume := corev1.Volume{
+	var certsDirPath = "/etc/containerd/certs.d"
+	volumes = append(volumes, corev1.Volume{
 		Name: "containerd-hosts",
 		VolumeSource: corev1.VolumeSource{
 			HostPath: &corev1.HostPathVolumeSource{
-				Path: "/etc/containerd/certs.d",
+				Path: certsDirPath,
+				Type: k8sutil.HostPath(corev1.HostPathDirectoryOrCreate),
 			},
 		},
-	}
-	mount := corev1.VolumeMount{
+	})
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
 		Name:      "containerd-hosts",
-		MountPath: "/etc/containerd/certs.d",
+		MountPath: certsDirPath,
+	})
+
+	if containerdSockAddress == init_containerd.K3sContainerdAddress {
+		var k3sRegistryConfigPath = "/etc/rancher/k3s/"
+		volumes = append(volumes, corev1.Volume{
+			Name: "k3s-containerd-registry",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: k3sRegistryConfigPath,
+					Type: k8sutil.HostPath(corev1.HostPathDirectoryOrCreate),
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "k3s-containerd-registry",
+			MountPath: k3sRegistryConfigPath,
+		})
 	}
-	return volume, mount
+	return volumes, volumeMounts
 }
 
 func volumeByDockerSocket() (corev1.Volume, corev1.VolumeMount) {

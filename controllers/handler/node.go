@@ -10,6 +10,7 @@ import (
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
 	"github.com/wutong-paas/wutong-operator/util/constants"
 	"github.com/wutong-paas/wutong-operator/util/containerutil"
+	init_containerd "github.com/wutong-paas/wutong-operator/util/init-containerd"
 	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 	"github.com/wutong-paas/wutong-operator/util/probeutil"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
@@ -174,12 +175,13 @@ func (n *node) getDockerVolumes() ([]corev1.Volume, []corev1.VolumeMount) {
 }
 
 func (n *node) getContainerdVolumes() ([]corev1.Volume, []corev1.VolumeMount) {
+	var containerdSockAddress = init_containerd.GetRuntimeSocketAddress()
 	volumes := []corev1.Volume{
 		{
 			Name: "containerdsock",
 			VolumeSource: corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
-					Path: "/run/containerd/containerd.sock",
+					Path: containerdSockAddress,
 					Type: k8sutil.HostPath(corev1.HostPathSocket),
 				},
 			},
@@ -197,7 +199,7 @@ func (n *node) getContainerdVolumes() ([]corev1.Volume, []corev1.VolumeMount) {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "containerdsock", // default using containerd
-			MountPath: "/run/containerd/containerd.sock",
+			MountPath: containerdSockAddress,
 		},
 		{
 			Name:      "varlog",
@@ -284,7 +286,7 @@ func (n *node) daemonSetForWutongNode() client.Object {
 		args = append(args, "--container-runtime=docker")
 	} else {
 		args = append(args, "--container-runtime=containerd")
-		args = append(args, "--runtime-endpoint=/run/containerd/containerd.sock")
+		args = append(args, "--runtime-endpoint="+init_containerd.GetRuntimeSocketAddress())
 	}
 	volumes = append(volumes, runtimeVolumes...)
 	volumeMounts = append(volumeMounts, runtimeVolumeMounts...)

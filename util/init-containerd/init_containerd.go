@@ -2,11 +2,25 @@ package init_containerd
 
 import (
 	"context"
+	"os"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/pelletier/go-toml"
+)
+
+const (
+	ContainerdConfigPath     = "/etc/containerd/config.toml"
+	DefaultContainerdAddress = "/run/containerd/containerd.sock"
+	K3sContainerdAddress     = "/run/k3s/containerd/containerd.sock"
+)
+
+var (
+	ContainerdSockAddressList = []string{
+		DefaultContainerdAddress,
+		K3sContainerdAddress,
+	}
 )
 
 // ContainerdAPI -
@@ -17,17 +31,7 @@ type ContainerdAPI struct {
 }
 
 func InitContainerd() (*ContainerdAPI, error) {
-	// 通过读取配置文件，获取 containerd 的 socket 地址
-	containerdConf, err := toml.LoadFile("/etc/containerd/config.toml")
-	if err != nil {
-		return nil, err
-	}
-	address := containerdConf.Get("grpc.address").(string)
-	if address == "" {
-		return nil, err
-	}
-
-	containerdClient, err := containerd.New(address)
+	containerdClient, err := containerd.New(GetRuntimeSocketAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -39,4 +43,27 @@ func InitContainerd() (*ContainerdAPI, error) {
 		CCtx:             cctx,
 		ContainerdClient: containerdClient,
 	}, nil
+}
+
+func GetRuntimeSocketAddress() string {
+	var result string
+
+	containerdConf, err := toml.LoadFile(ContainerdConfigPath)
+	if err == nil {
+		result = containerdConf.Get("grpc.address").(string)
+	}
+
+	if result == "" {
+		for _, sock := range ContainerdSockAddressList {
+			if _, err := os.Stat(sock); err == nil {
+				result = sock
+				break
+			}
+		}
+	}
+
+	if result == "" {
+		result = DefaultContainerdAddress
+	}
+	return result
 }

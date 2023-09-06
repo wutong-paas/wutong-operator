@@ -772,7 +772,7 @@ func (p *pkg) imageLoad(file string) (string, error) {
 	defer f.Close()
 	var imageNames []images.Image
 	if imageNames, err = p.containerdCli.ContainerdClient.Import(p.containerdCli.CCtx, f); err != nil {
-		logrus.Errorf("load image from file %s failure %s", f, err.Error())
+		logrus.Errorf("load image from file %s failure %s", f.Name(), err.Error())
 	}
 	if err != nil {
 		return "", fmt.Errorf("path: %s; failed to load images: %v", file, err)
