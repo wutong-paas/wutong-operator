@@ -152,7 +152,7 @@ func (a *appui) deploymentForAppUI() client.Object {
 		},
 		{
 			Name:  "REGION_WS_URL",
-			Value: fmt.Sprintf("ws://%s:6060", a.cluster.GatewayIngressIP()),
+			Value: fmt.Sprintf("ws://%s:6060", GatewayIngressIP(a.cluster)),
 		},
 		{
 			Name:  "REGION_HTTP_DOMAIN",
@@ -160,7 +160,7 @@ func (a *appui) deploymentForAppUI() client.Object {
 		},
 		{
 			Name:  "REGION_TCP_DOMAIN",
-			Value: a.cluster.GatewayIngressIP(),
+			Value: GatewayIngressIP(a.cluster),
 		},
 		{
 			Name:  "IMAGE_REPO",
@@ -330,7 +330,7 @@ func (a *appui) migrationsJob() *batchv1.Job {
 		},
 		{
 			Name:  "REGION_WS_URL",
-			Value: fmt.Sprintf("ws://%s:6060", a.cluster.GatewayIngressIP()),
+			Value: fmt.Sprintf("ws://%s:6060", GatewayIngressIP(a.cluster)),
 		},
 		{
 			Name:  "REGION_HTTP_DOMAIN",
@@ -338,7 +338,7 @@ func (a *appui) migrationsJob() *batchv1.Job {
 		},
 		{
 			Name:  "REGION_TCP_DOMAIN",
-			Value: a.cluster.GatewayIngressIP(),
+			Value: GatewayIngressIP(a.cluster),
 		},
 		{
 			Name:  "IMAGE_REPO",

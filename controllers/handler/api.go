@@ -406,10 +406,10 @@ func (a *api) secretAndConfigMapForAPI() []client.Object {
 			Namespace: a.component.Namespace,
 		},
 		Data: map[string]string{
-			"apiAddress":          fmt.Sprintf("https://%s:%d", a.cluster.GatewayIngressIP(), 8443),
-			"websocketAddress":    fmt.Sprintf("ws://%s:%d", a.cluster.GatewayIngressIP(), 6060),
+			"apiAddress":          fmt.Sprintf("https://%s:%d", GatewayIngressIP(a.cluster), 8443),
+			"websocketAddress":    fmt.Sprintf("ws://%s:%d", GatewayIngressIP(a.cluster), 6060),
 			"defaultDomainSuffix": a.cluster.Spec.SuffixHTTPHost,
-			"defaultTCPHost":      a.cluster.GatewayIngressIP(),
+			"defaultTCPHost":      GatewayIngressIP(a.cluster),
 		},
 		BinaryData: map[string][]byte{
 			"client.pem":     clientPem,
