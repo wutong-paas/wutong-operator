@@ -7,7 +7,8 @@ import (
 	"time"
 
 	dclient "github.com/docker/docker/client"
-	"github.com/wutong-paas/wutong-operator/util/containerutil"
+	"github.com/wutong-paas/wutong-operator/util/constants"
+	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 )
 
 // LogCollectRequest define info which should be collect
@@ -77,14 +78,14 @@ type DockerServer struct {
 
 // GetDockerInfo -
 func GetDockerInfo() (info *DockerInfo, err error) {
-	if containerutil.GetContainerRuntime() != containerutil.ContainerRuntimeDocker {
+	if k8sutil.GetContainerRuntime().Name != constants.ContainerRuntimeDocker {
 		server := &DockerServer{
 			OS:     runtime.GOOS,
 			OSArch: runtime.GOARCH,
 			NCPU:   runtime.NumCPU(),
 		}
 		return &DockerInfo{
-			ClientVersion: containerutil.ContainerRuntimeContainerd,
+			ClientVersion: constants.ContainerRuntimeContainerd,
 			Server:        server,
 		}, nil
 	}

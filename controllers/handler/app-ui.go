@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/wutong-paas/wutong-operator/util/k8sutil"
+	"github.com/wutong-paas/wutong-operator/util/wtutil"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
@@ -152,7 +153,7 @@ func (a *appui) deploymentForAppUI() client.Object {
 		},
 		{
 			Name:  "REGION_WS_URL",
-			Value: fmt.Sprintf("ws://%s:6060", a.cluster.GatewayIngressIP()),
+			Value: fmt.Sprintf("ws://%s:6060", wtutil.GatewayIngressIP(a.cluster)),
 		},
 		{
 			Name:  "REGION_HTTP_DOMAIN",
@@ -160,7 +161,7 @@ func (a *appui) deploymentForAppUI() client.Object {
 		},
 		{
 			Name:  "REGION_TCP_DOMAIN",
-			Value: a.cluster.GatewayIngressIP(),
+			Value: wtutil.GatewayIngressIP(a.cluster),
 		},
 		{
 			Name:  "IMAGE_REPO",
@@ -283,11 +284,7 @@ func (a *appui) serviceForAppUI() client.Object {
 }
 
 func (a *appui) ingressForAppUI() client.Object {
-	annotations := map[string]string{
-		"nginx.ingress.kubernetes.io/l4-enable": "true",
-		"nginx.ingress.kubernetes.io/l4-host":   "0.0.0.0",
-		"nginx.ingress.kubernetes.io/l4-port":   "7070",
-	}
+	annotations := wtutil.TCPIngressAnnotationsFromPort("7070")
 	if k8sutil.GetKubeVersion().AtLeast(utilversion.MustParseSemantic("v1.19.0")) {
 		return createIngress(AppUIName, a.component.Namespace, annotations, a.labels, AppUIName, "http")
 	}
@@ -330,7 +327,7 @@ func (a *appui) migrationsJob() *batchv1.Job {
 		},
 		{
 			Name:  "REGION_WS_URL",
-			Value: fmt.Sprintf("ws://%s:6060", a.cluster.GatewayIngressIP()),
+			Value: fmt.Sprintf("ws://%s:6060", wtutil.GatewayIngressIP(a.cluster)),
 		},
 		{
 			Name:  "REGION_HTTP_DOMAIN",
@@ -338,7 +335,7 @@ func (a *appui) migrationsJob() *batchv1.Job {
 		},
 		{
 			Name:  "REGION_TCP_DOMAIN",
-			Value: a.cluster.GatewayIngressIP(),
+			Value: wtutil.GatewayIngressIP(a.cluster),
 		},
 		{
 			Name:  "IMAGE_REPO",

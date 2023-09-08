@@ -6,7 +6,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/wutong-paas/wutong-operator/util/containerutil"
 	"github.com/wutong-paas/wutong-operator/util/probeutil"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
 
@@ -38,7 +37,6 @@ type chaos struct {
 	pvcParametersRWX     *pvcParameters
 	cacheStorageRequest  int64
 	wtdataStorageRequest int64
-	containerRuntime     string
 }
 
 var _ ComponentHandler = &chaos{}
@@ -55,7 +53,6 @@ func NewChaos(ctx context.Context, client client.Client, component *wutongv1alph
 		labels:               LabelsForWutongComponent(component),
 		cacheStorageRequest:  getStorageRequest("CHAOS_CACHE_STORAGE_REQUEST", 10),
 		wtdataStorageRequest: getStorageRequest("WTDATA_STORAGE_REQUEST", 40),
-		containerRuntime:     containerutil.GetContainerRuntime(),
 	}
 }
 
@@ -180,21 +177,12 @@ func (c *chaos) deployment() client.Object {
 	if c.cluster.Spec.CacheMode == "hostpath" {
 		args = append(args, "--cache-mode=hostpath")
 	}
-	if c.containerRuntime == containerutil.ContainerRuntimeDocker {
-		volume, mount := volumeByDockerSocket()
-		volumeMounts = append(volumeMounts, mount)
-		volumes = append(volumes, volume)
-		args = append(args, "--container-runtime=docker")
-	} else {
-		socketVolume, socketMount := volumeByContainerdSocket()
-		configVolume, configMount := volumeByContainerdConfig()
-		volumeMounts = append(volumeMounts, socketMount)
-		volumeMounts = append(volumeMounts, configMount)
-		volumes = append(volumes, socketVolume)
-		volumes = append(volumes, configVolume)
-		args = append(args, "--container-runtime=containerd")
-		args = append(args, "--runtime-endpoint=/run/containerd/containerd.sock")
-	}
+	rt := k8sutil.GetContainerRuntime()
+	vs, vms := volumesByContainerRuntime(rt.Name, rt.Endpoint)
+	volumes = append(volumes, vs...)
+	volumeMounts = append(volumeMounts, vms...)
+	args = append(args, "--container-runtime="+rt.Name)
+	args = append(args, "--runtime-endpoint="+rt.Endpoint)
 
 	if c.etcdSecret != nil {
 		volume, mount := volumeByEtcd(c.etcdSecret)
@@ -415,50 +403,70 @@ func (c *chaos) defaultMavenSetting() *corev1.ConfigMap {
 	}
 }
 
-func volumeByContainerdSocket() (corev1.Volume, corev1.VolumeMount) {
-	volume := corev1.Volume{
-		Name: "containerdsock",
-		VolumeSource: corev1.VolumeSource{
-			HostPath: &corev1.HostPathVolumeSource{
-				Path: "/run/containerd/containerd.sock",
-			},
-		},
-	}
-	mount := corev1.VolumeMount{
-		Name:      "containerdsock",
-		MountPath: "/run/containerd/containerd.sock",
-	}
-	return volume, mount
-}
+func volumesByContainerRuntime(containerRuntime, sock string) ([]corev1.Volume, []corev1.VolumeMount) {
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
 
-func volumeByContainerdConfig() (corev1.Volume, corev1.VolumeMount) {
-	volume := corev1.Volume{
-		Name: "containerd-hosts",
-		VolumeSource: corev1.VolumeSource{
-			HostPath: &corev1.HostPathVolumeSource{
-				Path: "/etc/containerd/certs.d",
-			},
-		},
-	}
-	mount := corev1.VolumeMount{
-		Name:      "containerd-hosts",
-		MountPath: "/etc/containerd/certs.d",
-	}
-	return volume, mount
-}
+	switch containerRuntime {
+	case constants.ContainerRuntimeContainerd:
 
-func volumeByDockerSocket() (corev1.Volume, corev1.VolumeMount) {
-	volume := corev1.Volume{
-		Name: "dockersock",
-		VolumeSource: corev1.VolumeSource{
-			HostPath: &corev1.HostPathVolumeSource{
-				Path: "/var/run/docker.sock",
+		volumes = append(volumes, corev1.Volume{
+			Name: "containerdsock",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: sock,
+				},
 			},
-		},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "containerdsock",
+			MountPath: sock,
+		})
+
+		volumes = append(volumes, corev1.Volume{
+			Name: "containerd-hosts",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: constants.DefaultContainerdCertsDir,
+					Type: k8sutil.HostPath(corev1.HostPathDirectoryOrCreate),
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "containerd-hosts",
+			MountPath: constants.DefaultContainerdCertsDir,
+		})
+
+		if sock == constants.K3sContainerdSock {
+			var k3sRegistryConfigPath = "/etc/rancher/k3s/"
+			volumes = append(volumes, corev1.Volume{
+				Name: "k3s-containerd-registry",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: k3sRegistryConfigPath,
+						Type: k8sutil.HostPath(corev1.HostPathDirectoryOrCreate),
+					},
+				},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "k3s-containerd-registry",
+				MountPath: k3sRegistryConfigPath,
+			})
+		}
+	case constants.ContainerRuntimeDocker:
+		volumes = append(volumes, corev1.Volume{
+			Name: "dockersock",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: sock,
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "dockersock",
+			MountPath: sock,
+		})
 	}
-	mount := corev1.VolumeMount{
-		Name:      "dockersock",
-		MountPath: "/var/run/docker.sock",
-	}
-	return volume, mount
+
+	return volumes, volumeMounts
 }

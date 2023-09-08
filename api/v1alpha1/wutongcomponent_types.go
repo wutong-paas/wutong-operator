@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -161,7 +160,7 @@ func (in *WutongComponent) ImagePullPolicy() corev1.PullPolicy {
 }
 
 // NewWutongComponentCondition creates a new WutongComponent condition.
-func NewWutongComponentCondition(condType WutongComponentConditionType, status v1.ConditionStatus, reason, message string) *WutongComponentCondition {
+func NewWutongComponentCondition(condType WutongComponentConditionType, status corev1.ConditionStatus, reason, message string) *WutongComponentCondition {
 	return &WutongComponentCondition{
 		Type:               condType,
 		Status:             status,

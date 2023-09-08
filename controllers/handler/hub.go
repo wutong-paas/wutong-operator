@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//HubName name
+// HubName name
 var HubName = "wt-hub"
 var hubDataPvcName = "wt-hub"
 var hubImageRepository = "hub-image-repository"
@@ -46,7 +46,7 @@ type hub struct {
 var _ ComponentHandler = &hub{}
 var _ StorageClassRWXer = &hub{}
 
-//NewHub nw hub
+// NewHub nw hub
 func NewHub(ctx context.Context, client client.Client, component *wutongv1alpha1.WutongComponent, cluster *wutongv1alpha1.WutongCluster) ComponentHandler {
 	return &hub{
 		component:      component,

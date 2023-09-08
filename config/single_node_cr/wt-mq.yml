@@ -9,6 +9,6 @@ metadata:
     name: wt-mq
 spec:
   replicas: 1
-  image: swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-mq:v1.3.0
+  image: swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-mq:v1.5.0
   imagePullPolicy: IfNotPresent
   priorityComponent: false

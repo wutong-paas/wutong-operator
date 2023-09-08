@@ -22,7 +22,7 @@ type etcd struct {
 	component *wutongv1alpha1.WutongComponent
 	cluster   *wutongv1alpha1.WutongCluster
 	labels    map[string]string
-	affinity  *corev1.VolumeNodeAffinity
+	// affinity  *corev1.VolumeNodeAffinity
 
 	pvcParametersRWO *pvcParameters
 	storageRequest   int64
@@ -54,12 +54,6 @@ func (e *etcd) Before() error {
 	if err := setStorageCassName(e.ctx, e.client, e.component.Namespace, e); err != nil {
 		return err
 	}
-
-	affinity, err := nodeAffnityNodesForChaos(e.cluster)
-	if err != nil {
-		return err
-	}
-	e.affinity = affinity
 
 	return nil
 }
@@ -471,57 +465,3 @@ func (e *etcd) serviceForEtcd() client.Object {
 
 	return svc
 }
-
-// func (e *etcd) pv() *corev1.PersistentVolume {
-// 	pv := &corev1.PersistentVolume{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:   EtcdName,
-// 			Labels: e.labels,
-// 		},
-// 	}
-
-// 	size := resource.NewQuantity(1*1024*1024*1024, resource.BinarySI)
-// 	spec := corev1.PersistentVolumeSpec{
-// 		AccessModes: []corev1.PersistentVolumeAccessMode{
-// 			corev1.ReadWriteOnce,
-// 		},
-// 		Capacity: corev1.ResourceList{
-// 			corev1.ResourceStorage: *size,
-// 		},
-// 		StorageClassName: "manual",
-// 		NodeAffinity:     e.affinity,
-// 	}
-
-// 	hostPath := &corev1.HostPathVolumeSource{
-// 		Path: "/opt/wutong/data/etcd" + time.Now().Format("20060102150405"),
-// 		Type: k8sutil.HostPath(corev1.HostPathDirectoryOrCreate),
-// 	}
-// 	spec.HostPath = hostPath
-
-// 	pv.Spec = spec
-
-// 	return pv
-// }
-
-// func (e *etcd) pvc() *corev1.PersistentVolumeClaim {
-// 	size := resource.NewQuantity(1*1024*1024*1024, resource.BinarySI)
-// 	pvc := &corev1.PersistentVolumeClaim{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:   EtcdName,
-// 			Labels: e.labels,
-// 		},
-// 		Spec: corev1.PersistentVolumeClaimSpec{
-// 			AccessModes: []corev1.PersistentVolumeAccessMode{
-// 				corev1.ReadWriteOnce,
-// 			},
-// 			Resources: corev1.ResourceRequirements{
-// 				Requests: map[corev1.ResourceName]resource.Quantity{
-// 					corev1.ResourceStorage: *size,
-// 				},
-// 			},
-// 			VolumeName:       EtcdName,
-// 			StorageClassName: commonutil.String("manual"),
-// 		},
-// 	}
-// 	return pvc
-// }

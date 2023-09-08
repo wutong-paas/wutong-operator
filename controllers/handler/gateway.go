@@ -7,6 +7,7 @@ import (
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
+	"github.com/wutong-paas/wutong-operator/util/wtutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,6 +93,12 @@ func (g *gateway) daemonset() client.Object {
 	for _, node := range g.cluster.Spec.NodesForGateway {
 		nodeNames = append(nodeNames, node.Name)
 	}
+	if len(nodeNames) == 0 {
+		knodes := listMasterNodesForGateway()
+		for _, node := range knodes {
+			nodeNames = append(nodeNames, node.Name)
+		}
+	}
 	var affinity *corev1.Affinity
 	if len(nodeNames) > 0 {
 		affinity = affinityForRequiredNodes(nodeNames)
@@ -153,4 +160,11 @@ func (g *gateway) daemonset() client.Object {
 	}
 
 	return ds
+}
+
+func listMasterNodesForGateway() []*wutongv1alpha1.K8sNode {
+	nodes := wtutil.ListMasterNodes()
+	// Filtering nodes with port conflicts
+	// check gateway ports
+	return wtutil.FilterNodesWithPortConflicts(nodes)
 }

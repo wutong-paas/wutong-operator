@@ -3,7 +3,6 @@ package precheck
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
@@ -13,19 +12,21 @@ import (
 )
 
 type storage struct {
-	ctx    context.Context
-	client client.Client
-	ns     string
-	rwx    *wutongv1alpha1.WutongVolumeSpec
+	ctx                     context.Context
+	client                  client.Client
+	ns                      string
+	rwx                     *wutongv1alpha1.WutongVolumeSpec
+	defaultStorageClassName string
 }
 
 // NewStorage -
-func NewStorage(ctx context.Context, client client.Client, ns string, rwx *wutongv1alpha1.WutongVolumeSpec) PreChecker {
+func NewStorage(ctx context.Context, client client.Client, ns string, rwx *wutongv1alpha1.WutongVolumeSpec, defaultStorageClassName string) PreChecker {
 	return &storage{
-		ctx:    ctx,
-		client: client,
-		ns:     ns,
-		rwx:    rwx,
+		ctx:                     ctx,
+		client:                  client,
+		ns:                      ns,
+		rwx:                     rwx,
+		defaultStorageClassName: defaultStorageClassName,
 	}
 }
 
@@ -36,38 +37,32 @@ func (s *storage) Check() wutongv1alpha1.WutongClusterCondition {
 		LastHeartbeatTime: metav1.NewTime(time.Now()),
 	}
 
-	if s.rwx != nil && s.rwx.StorageClassName != "" {
-		return condition
-	}
-
-	if s.rwx == nil {
+	if s.rwx.StorageClassName == "" {
 		condition.Status = corev1.ConditionFalse
 		condition.Reason = "InProgress"
-		condition.Message =
-			fmt.Sprintf("precheck for %s is in progress", wutongv1alpha1.WutongClusterConditionTypeStorage)
-		return condition
+		condition.Message = fmt.Sprintf("precheck for %s is in progress", wutongv1alpha1.WutongClusterConditionTypeStorage)
 	}
 
 	return condition
 }
 
-func (s *storage) isPVCBound(pvc *corev1.PersistentVolumeClaim) bool {
-	return pvc.Status.Phase == corev1.ClaimBound
-}
+// func (s *storage) isPVCBound(pvc *corev1.PersistentVolumeClaim) bool {
+// 	return pvc.Status.Phase == corev1.ClaimBound
+// }
 
 // func (s *storage) pvcForWTData(accessModes []corev1.PersistentVolumeAccessMode, storageClassName string) *corev1.PersistentVolumeClaim {
 // 	labels := wtutil.LabelsForWutong(nil)
 // 	return k8sutil.PersistentVolumeClaimForWTData(s.ns, constants.WTDataPVC, accessModes, labels, storageClassName, 20)
 // }
 
-func (s *storage) failConditoin(condition wutongv1alpha1.WutongClusterCondition, msg string) wutongv1alpha1.WutongClusterCondition {
-	return failConditoin(condition, "StorageFailed", msg)
-}
+// func (s *storage) failConditoin(condition wutongv1alpha1.WutongClusterCondition, msg string) wutongv1alpha1.WutongClusterCondition {
+// 	return failConditoin(condition, "StorageFailed", msg)
+// }
 
-func eventListToString(eventList *corev1.EventList) string {
-	var res []string
-	for _, event := range eventList.Items {
-		res = append(res, fmt.Sprintf("%s: %s", event.Reason, event.Message))
-	}
-	return strings.Join(res, ",")
-}
+// func eventListToString(eventList *corev1.EventList) string {
+// 	var res []string
+// 	for _, event := range eventList.Items {
+// 		res = append(res, fmt.Sprintf("%s: %s", event.Reason, event.Message))
+// 	}
+// 	return strings.Join(res, ",")
+// }

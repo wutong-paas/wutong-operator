@@ -48,9 +48,9 @@ func (d *imagerepo) Check() wutongv1alpha1.WutongClusterCondition {
 	}
 
 	// Verify that the image repository is available
-	d.log.V(6).Info("login repository", "repository", wtutil.GetImageRepositoryDomain(d.cluster), "user", d.cluster.Spec.ImageHub.Username)
+	d.log.V(6).Info("login repository", "repository", getImageRepositoryDomain(d.cluster), "user", d.cluster.Spec.ImageHub.Username)
 
-	if err := repositoryutil.LoginRepository(wtutil.GetImageRepositoryDomain(d.cluster), d.cluster.Spec.ImageHub.Username, d.cluster.Spec.ImageHub.Password); err != nil {
+	if err := repositoryutil.LoginRepository(getImageRepositoryDomain(d.cluster), d.cluster.Spec.ImageHub.Username, d.cluster.Spec.ImageHub.Password); err != nil {
 		return d.failConditoin(condition, err)
 	}
 	return condition
@@ -58,4 +58,12 @@ func (d *imagerepo) Check() wutongv1alpha1.WutongClusterCondition {
 
 func (d *imagerepo) failConditoin(condition wutongv1alpha1.WutongClusterCondition, err error) wutongv1alpha1.WutongClusterCondition {
 	return failConditoin(condition, "ImageRepoFailed", err.Error())
+}
+
+// getImageRepositoryDomain returns image repository domain based on wutongcluster.
+func getImageRepositoryDomain(cluster *wutongv1alpha1.WutongCluster) string {
+	if cluster.Spec.ImageHub == nil {
+		return constants.DefImageRepository
+	}
+	return cluster.Spec.ImageHub.Domain
 }

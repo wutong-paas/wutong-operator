@@ -6,7 +6,10 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 )
+
+const ()
 
 // ContainerdAPI -
 type ContainerdAPI struct {
@@ -16,13 +19,12 @@ type ContainerdAPI struct {
 }
 
 func InitContainerd() (*ContainerdAPI, error) {
-	containerdClient, err := containerd.New("/run/containerd/containerd.sock")
+	cr := k8sutil.GetContainerRuntime()
+	containerdClient, err := containerd.New(cr.Endpoint)
 	if err != nil {
-		containerdClient, err = containerd.New("/var/run/docker/containerd/containerd.sock")
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
+
 	cctx := namespaces.WithNamespace(context.Background(), "k8s.io")
 	imageService := containerdClient.ImageService()
 	return &ContainerdAPI{
