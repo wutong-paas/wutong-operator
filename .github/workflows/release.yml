@@ -19,11 +19,11 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
-      
+
       # - name: Set up Docker Buildx
       #   uses: docker/setup-buildx-action@v2
 
-      - name: Set SWR buildkit Image
+      - name: Set huaweiyun buildkit image
         run: |
           docker buildx create --use --name swrbuilder --driver docker-container --driver-opt image=swr.cn-southwest-2.myhuaweicloud.com/wutong/buildkit:stable
 
@@ -42,6 +42,6 @@ jobs:
           file: Dockerfile
           push: true
           tags: ${{ secrets.DOMESTIC_DOCKER_SERVER }}/wutong/${{ env.TITLE }}:${{ env.VERSION }}
-      
+
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
