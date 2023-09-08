@@ -1,6 +1,6 @@
 module github.com/wutong-paas/wutong-operator
 
-go 1.18
+go 1.21
 
 require (
 	github.com/aliyun/aliyun-oss-go-sdk v2.1.5+incompatible
