@@ -1,14 +1,43 @@
 package wtutil
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"path"
+	"sort"
+	"time"
+
+	"github.com/wutong-paas/wutong-operator/util/constants"
+	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
-	"github.com/wutong-paas/wutong-operator/util/constants"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
+
+type NodesSortByName []*wutongv1alpha1.K8sNode
+
+func (s NodesSortByName) Len() int           { return len(s) }
+func (s NodesSortByName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s NodesSortByName) Less(i, j int) bool { return s[i].Name < s[j].Name }
+
+// GetImageRepository returns image repository name based on WutongCluster.
+func GetImageRepository(cluster *wutongv1alpha1.WutongCluster) string {
+	if cluster.Spec.ImageHub == nil {
+		return constants.DefImageRepository
+	}
+	return path.Join(cluster.Spec.ImageHub.Domain, cluster.Spec.ImageHub.Namespace)
+}
+
+func GetImageRepositoryDomain(cluster *wutongv1alpha1.WutongCluster) string {
+	if cluster.Spec.ImageHub == nil {
+		return constants.DefImageRepository
+	}
+	return cluster.Spec.ImageHub.Domain
+}
 
 // LabelsForWutong returns labels for resources created by wutong operator.
 func LabelsForWutong(labels map[string]string) map[string]string {
@@ -26,26 +55,92 @@ func LabelsForWutong(labels map[string]string) map[string]string {
 	return wtLabels
 }
 
-// GetImageRepository returns image repository name based on WutongCluster.
-func GetImageRepository(cluster *wutongv1alpha1.WutongCluster) string {
-	if cluster.Spec.ImageHub == nil {
-		return constants.DefImageRepository
+func ListMasterNodes() []*wutongv1alpha1.K8sNode {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	nodeList, err := k8sutil.GetClientSet().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil
 	}
-	return path.Join(cluster.Spec.ImageHub.Domain, cluster.Spec.ImageHub.Namespace)
+
+	findIP := func(addresses []corev1.NodeAddress, addressType corev1.NodeAddressType) string {
+		for _, address := range addresses {
+			if address.Type == addressType {
+				return address.Address
+			}
+		}
+		return ""
+	}
+
+	var k8sNodes []*wutongv1alpha1.K8sNode
+	for _, node := range nodeList.Items {
+		_, ok := node.Labels[constants.MasterNodeLabelKey]
+		if !ok {
+			continue
+		}
+		k8sNode := &wutongv1alpha1.K8sNode{
+			Name:       node.Name,
+			InternalIP: findIP(node.Status.Addresses, corev1.NodeInternalIP),
+			ExternalIP: findIP(node.Status.Addresses, corev1.NodeExternalIP),
+		}
+		k8sNodes = append(k8sNodes, k8sNode)
+	}
+
+	return k8sNodes
 }
 
-// LabelsForAccessModeRWX returns wutong labels with access mode rwx.
-func LabelsForAccessModeRWX() map[string]string {
-	return map[string]string{
-		"accessModes": "rwx",
+func ListNodesByLabels(labelKey string) []*wutongv1alpha1.K8sNode {
+	nodeList := &corev1.NodeList{}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	re, err := labels.NewRequirement(labelKey, selection.Exists, []string{})
+	if err == nil {
+		if nodeList, err = k8sutil.GetClientSet().CoreV1().Nodes().List(ctx, metav1.ListOptions{
+			LabelSelector: labels.NewSelector().Add(*re).String(),
+		}); err != nil {
+			return nil
+		}
+	} else {
+		if nodeList, err = k8sutil.GetClientSet().CoreV1().Nodes().List(ctx, metav1.ListOptions{}); err != nil {
+			return nil
+		}
+		for _, node := range nodeList.Items {
+			if _, ok := node.Labels[labelKey]; ok {
+				nodeList.Items = append(nodeList.Items, node)
+			}
+		}
 	}
+
+	findIP := func(addresses []corev1.NodeAddress, addressType corev1.NodeAddressType) string {
+		for _, address := range addresses {
+			if address.Type == addressType {
+				return address.Address
+			}
+		}
+		return ""
+	}
+
+	var k8sNodes []*wutongv1alpha1.K8sNode
+	for _, node := range nodeList.Items {
+		k8sNode := &wutongv1alpha1.K8sNode{
+			Name:       node.Name,
+			InternalIP: findIP(node.Status.Addresses, corev1.NodeInternalIP),
+			ExternalIP: findIP(node.Status.Addresses, corev1.NodeExternalIP),
+		}
+		k8sNodes = append(k8sNodes, k8sNode)
+	}
+
+	sort.Sort(NodesSortByName(k8sNodes))
+
+	return k8sNodes
 }
 
-// LabelsForAccessModeRWO returns wutong labels with access mode rwo.
-func LabelsForAccessModeRWO() map[string]string {
-	return map[string]string{
-		"accessModes": "rwo",
-	}
+func ListMasterNodesForGateway() []*wutongv1alpha1.K8sNode {
+	nodes := ListMasterNodes()
+	// Filtering nodes with port conflicts
+	// check gateway ports
+	return FilterNodesWithPortConflicts(nodes)
 }
 
 // FilterNodesWithPortConflicts -
@@ -77,18 +172,24 @@ func isPortOccupied(address string) bool {
 	return true
 }
 
-// FailCondition -
-func FailCondition(condition wutongv1alpha1.WutongClusterCondition, reason, msg string) wutongv1alpha1.WutongClusterCondition {
-	condition.Status = corev1.ConditionFalse
-	condition.Reason = reason
-	condition.Message = msg
-	return condition
+func GatewayIngressIP(cluster *wutongv1alpha1.WutongCluster) string {
+	result := cluster.GatewayIngressIP()
+	if result == "" {
+		masterNodes := ListMasterNodes()
+		if len(masterNodes) > 0 {
+			result = masterNodes[0].ExternalIP
+			if result == "" {
+				result = masterNodes[0].InternalIP
+			}
+		}
+	}
+	return result
 }
 
-// GetImageRepositoryDomain returns image repository domain based on wutongcluster.
-func GetImageRepositoryDomain(cluster *wutongv1alpha1.WutongCluster) string {
-	if cluster.Spec.ImageHub == nil {
-		return constants.DefImageRepository
+func TCPIngressAnnotationsFromPort(port string) map[string]string {
+	return map[string]string{
+		"nginx.ingress.kubernetes.io/l4-enable": "true",
+		"nginx.ingress.kubernetes.io/l4-host":   "0.0.0.0",
+		"nginx.ingress.kubernetes.io/l4-port":   port,
 	}
-	return cluster.Spec.ImageHub.Domain
 }

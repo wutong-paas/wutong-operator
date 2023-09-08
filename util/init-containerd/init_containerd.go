@@ -2,26 +2,14 @@ package init_containerd
 
 import (
 	"context"
-	"os"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
-	"github.com/pelletier/go-toml"
+	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 )
 
-const (
-	ContainerdConfigPath     = "/etc/containerd/config.toml"
-	DefaultContainerdAddress = "/run/containerd/containerd.sock"
-	K3sContainerdAddress     = "/run/k3s/containerd/containerd.sock"
-)
-
-var (
-	ContainerdSockAddressList = []string{
-		DefaultContainerdAddress,
-		K3sContainerdAddress,
-	}
-)
+const ()
 
 // ContainerdAPI -
 type ContainerdAPI struct {
@@ -31,7 +19,8 @@ type ContainerdAPI struct {
 }
 
 func InitContainerd() (*ContainerdAPI, error) {
-	containerdClient, err := containerd.New(GetRuntimeSocketAddress())
+	cr := k8sutil.GetContainerRuntime()
+	containerdClient, err := containerd.New(cr.Endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -43,27 +32,4 @@ func InitContainerd() (*ContainerdAPI, error) {
 		CCtx:             cctx,
 		ContainerdClient: containerdClient,
 	}, nil
-}
-
-func GetRuntimeSocketAddress() string {
-	var result string
-
-	containerdConf, err := toml.LoadFile(ContainerdConfigPath)
-	if err == nil {
-		result = containerdConf.Get("grpc.address").(string)
-	}
-
-	if result == "" {
-		for _, sock := range ContainerdSockAddressList {
-			if _, err := os.Stat(sock); err == nil {
-				result = sock
-				break
-			}
-		}
-	}
-
-	if result == "" {
-		result = DefaultContainerdAddress
-	}
-	return result
 }

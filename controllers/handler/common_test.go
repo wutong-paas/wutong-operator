@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
-	"github.com/wutong-paas/wutong-operator/util/wtutil"
+	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,7 +66,7 @@ func TestStorageClassRWXVolumeRWXNotReady(t *testing.T) {
 	}
 
 	ns := "wt-system"
-	labels := wtutil.LabelsForAccessModeRWX()
+	labels := k8sutil.LabelsForAccessModeRWX()
 	volume := &wutongv1alpha1.WutongVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns,
@@ -88,7 +88,7 @@ func TestStorageClassRWXVolumeRWXOK(t *testing.T) {
 	}
 
 	ns := "wt-system"
-	labels := wtutil.LabelsForAccessModeRWX()
+	labels := k8sutil.LabelsForAccessModeRWX()
 	sc := "foobar.csi.wutong.io"
 	volume := &wutongv1alpha1.WutongVolume{
 		ObjectMeta: metav1.ObjectMeta{
@@ -128,7 +128,7 @@ func TestStorageClassRWXVolumeRWONotFoundButRWXFound(t *testing.T) {
 	}
 
 	ns := "wt-system"
-	labels := wtutil.LabelsForAccessModeRWX()
+	labels := k8sutil.LabelsForAccessModeRWX()
 	sc := "foobar.csi.wutong.io"
 	volume := &wutongv1alpha1.WutongVolume{
 		ObjectMeta: metav1.ObjectMeta{
@@ -154,8 +154,8 @@ func TestStorageClassRWXVolumeRWOOK(t *testing.T) {
 
 	ns := "wt-system"
 
-	volumerwo := getVolume(ns, wtutil.LabelsForAccessModeRWO())
-	volumerwx := getVolume(ns, wtutil.LabelsForAccessModeRWX())
+	volumerwo := getVolume(ns, k8sutil.LabelsForAccessModeRWO())
+	volumerwx := getVolume(ns, k8sutil.LabelsForAccessModeRWX())
 
 	cli := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(volumerwo, volumerwx).Build()
 	ctx := context.Background()
@@ -172,7 +172,7 @@ func TestSetStorageCassNameRWX(t *testing.T) {
 
 	ns := "wt-system"
 
-	volumerwx := getVolume(ns, wtutil.LabelsForAccessModeRWX())
+	volumerwx := getVolume(ns, k8sutil.LabelsForAccessModeRWX())
 	cli := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(volumerwx).Build()
 	ctx := context.Background()
 
@@ -190,7 +190,7 @@ func TestSetStorageCassNameRWO(t *testing.T) {
 
 	ns := "wt-system"
 
-	volumerwo := getVolume(ns, wtutil.LabelsForAccessModeRWO())
+	volumerwo := getVolume(ns, k8sutil.LabelsForAccessModeRWO())
 	cli := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(volumerwo).Build()
 	ctx := context.Background()
 
@@ -208,8 +208,8 @@ func TestSetStorageCassNameBothRWXAndRWO(t *testing.T) {
 
 	ns := "wt-system"
 
-	volumerwx := getVolume(ns, wtutil.LabelsForAccessModeRWX())
-	volumerwo := getVolume(ns, wtutil.LabelsForAccessModeRWO())
+	volumerwx := getVolume(ns, k8sutil.LabelsForAccessModeRWX())
+	volumerwo := getVolume(ns, k8sutil.LabelsForAccessModeRWO())
 	cli := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(volumerwo, volumerwx).Build()
 	ctx := context.Background()
 

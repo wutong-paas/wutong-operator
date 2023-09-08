@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/pelletier/go-toml"
 	"github.com/sirupsen/logrus"
-	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
+	"github.com/wutong-paas/wutong-operator/util/constants"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,48 +23,23 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/reference"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var once sync.Once
 var clientset kubernetes.Interface
-var (
-	// LabelNodeRolePrefix is a label prefix for node roles
-	// It's copied over to here until it's merged in core: https://github.com/kubernetes/kubernetes/pull/39112
-	LabelNodeRolePrefix = "node-role.kubernetes.io/"
-
-	// NodeLabelRole specifies the role of a node
-	NodeLabelRole = "kubernetes.io/role"
-)
 
 // GetClientSet -
 func GetClientSet() kubernetes.Interface {
 	if clientset == nil {
 		once.Do(func() {
-			config := MustNewKubeConfig("")
+			config := ctrl.GetConfigOrDie()
 			clientset = kubernetes.NewForConfigOrDie(config)
 		})
 	}
 	return clientset
-}
-
-// MustNewKubeConfig -
-func MustNewKubeConfig(kubeconfigPath string) *rest.Config {
-	if kubeconfigPath != "" {
-		cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-		if err != nil {
-			panic(err)
-		}
-		return cfg
-	}
-
-	cfg, err := InClusterConfig()
-	if err != nil {
-		panic(err)
-	}
-	return cfg
 }
 
 // NewKubeConfig -
@@ -135,22 +112,6 @@ func UpdateCRStatus(client client.Client, obj client.Object) error {
 	return nil
 }
 
-// MaterRoleLabel -
-func MaterRoleLabel(key string) map[string]string {
-	var labels map[string]string
-	switch key {
-	case LabelNodeRolePrefix + "master":
-		labels = map[string]string{
-			key: "",
-		}
-	case NodeLabelRole:
-		labels = map[string]string{
-			key: "master",
-		}
-	}
-	return labels
-}
-
 // PersistentVolumeClaimForWTData -
 func PersistentVolumeClaimForWTData(ns, claimName string, accessModes []corev1.PersistentVolumeAccessMode, labels map[string]string, storageClassName string, storageRequest int64) *corev1.PersistentVolumeClaim {
 	size := resource.NewQuantity(storageRequest*1024*1024*1024, resource.BinarySI)
@@ -173,16 +134,6 @@ func PersistentVolumeClaimForWTData(ns, claimName string, accessModes []corev1.P
 
 	return pvc
 }
-
-// GetFoobarPVC -
-// func GetFoobarPVC(ctx context.Context, client client.Client, ns string) (*corev1.PersistentVolumeClaim, error) {
-// 	pvc := corev1.PersistentVolumeClaim{}
-// 	err := client.Get(ctx, types.NamespacedName{Namespace: ns, Name: constants.FoobarPVC}, &pvc)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &pvc, nil
-// }
 
 // EventsForPersistentVolumeClaim -
 func EventsForPersistentVolumeClaim(pvc *corev1.PersistentVolumeClaim) (*corev1.EventList, error) {
@@ -250,42 +201,105 @@ func GetKubeVersion() *utilversion.Version {
 	return utilversion.MustParseSemantic(serverVersion.GitVersion)
 }
 
-func ListMasterNodes() []*wutongv1alpha1.K8sNode {
-	return listNodesByLabels()
+type containerRuntime struct {
+	Name     string
+	Endpoint string
 }
 
-func listNodesByLabels() []*wutongv1alpha1.K8sNode {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	nodeList, err := GetClientSet().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil
+var containerRuntimeInstance *containerRuntime
+
+var (
+	containerdSocks = []string{
+		constants.DefaultContainerdSock,
+		constants.K3sContainerdSock,
 	}
 
-	findIP := func(addresses []corev1.NodeAddress, addressType corev1.NodeAddressType) string {
-		for _, address := range addresses {
-			if address.Type == addressType {
-				return address.Address
+	dockerSocks = []string{
+		constants.DefaultContainerdSock,
+		constants.CriDockerdSock,
+		constants.DockershimSock,
+		constants.DockerSock,
+	}
+)
+
+// GetContainerRuntime 获取容器运行时以及容器运行时的 sock
+// 1、从 Node 节点信息获取容器运行时，参考：kubectl get node -o wide，如果是 kubeadm 部署的集群，那么 Node 节点信息中会有容器运行时
+// 2、如果 Node 节点信息中没有容器运行时，那么默认使用 containerd
+// 3、如果容器运行时是 containerd，那么从 /etc/containerd/config.toml 中获取 sock，如果仍然没有，那么遍历常见的 containerd sock 路径
+// 4、如果容器运行时是 docker，那么遍历常见的 docker sock 路径
+func GetContainerRuntime() *containerRuntime {
+	if containerRuntimeInstance != nil {
+		return containerRuntimeInstance
+	}
+
+	containerRuntimeInstance = new(containerRuntime)
+
+	nl, err := GetClientSet().CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
+		LabelSelector: constants.MasterNodeLabelKey,
+	})
+	if err == nil && len(nl.Items) > 0 {
+		containerRuntimeInstance.Name = strings.Split(nl.Items[0].Status.NodeInfo.ContainerRuntimeVersion, ":")[0]
+		// Note: Just worked for kubernetes installed by kubeadm
+		if v, ok := nl.Items[0].Annotations[constants.KubeadmContainerRuntimeEndpointAnnoKey]; ok && v != "" {
+			v = strings.TrimPrefix(v, "unix://")
+			containerRuntimeInstance.Endpoint = v
+		}
+	}
+
+	if containerRuntimeInstance.Name == "" {
+		containerRuntimeInstance.Name = constants.ContainerRuntimeContainerd
+	}
+
+	if containerRuntimeInstance.Endpoint != "" {
+		switch containerRuntimeInstance.Name {
+		case constants.ContainerRuntimeContainerd:
+			var endpoint string
+			containerdConf, err := toml.LoadFile(constants.ContainerdConfigPath)
+			if err == nil {
+				endpoint = containerdConf.Get("grpc.address").(string)
 			}
-		}
-		return ""
-	}
 
-	var k8sNodes []*wutongv1alpha1.K8sNode
-	for _, node := range nodeList.Items {
-		_, ok := node.Labels["node-role.kubernetes.io/control-plane"]
-		if !ok {
-			if _, ok = node.Labels["node-role.kubernetes.io/master"]; !ok {
-				continue
+			if endpoint == "" {
+				for _, sock := range containerdSocks {
+					if _, err := os.Stat(sock); err == nil {
+						if err == nil {
+							endpoint = sock
+							break
+						}
+					}
+				}
 			}
+			containerRuntimeInstance.Endpoint = endpoint
+
+		case constants.ContainerRuntimeDocker:
+			for _, sock := range dockerSocks {
+				_, err := os.Stat(sock)
+				if err == nil {
+					containerRuntimeInstance.Endpoint = sock
+					break
+				}
+			}
+			return containerRuntimeInstance
 		}
-		k8sNode := &wutongv1alpha1.K8sNode{
-			Name:       node.Name,
-			InternalIP: findIP(node.Status.Addresses, corev1.NodeInternalIP),
-			ExternalIP: findIP(node.Status.Addresses, corev1.NodeExternalIP),
-		}
-		k8sNodes = append(k8sNodes, k8sNode)
 	}
 
-	return k8sNodes
+	if containerRuntimeInstance.Endpoint == "" {
+		containerRuntimeInstance.Endpoint = constants.DefaultContainerdSock
+	}
+
+	return containerRuntimeInstance
+}
+
+// LabelsForAccessModeRWX returns wutong labels with access mode rwx.
+func LabelsForAccessModeRWX() map[string]string {
+	return map[string]string{
+		"accessModes": "rwx",
+	}
+}
+
+// LabelsForAccessModeRWO returns wutong labels with access mode rwo.
+func LabelsForAccessModeRWO() map[string]string {
+	return map[string]string{
+		"accessModes": "rwo",
+	}
 }

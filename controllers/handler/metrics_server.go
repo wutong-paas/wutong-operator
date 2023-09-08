@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
-
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
 	"github.com/wutong-paas/wutong-operator/util/k8sutil"
@@ -135,11 +133,9 @@ func apiServiceNeedUpgrade(old, new *kubeaggregatorv1.APIService) bool {
 }
 
 func (m *metricsServer) ListPods() ([]corev1.Pod, error) {
-
 	labels := m.labels
 	if !m.apiServiceCreatedByWutong() {
-		restConfig := k8sutil.MustNewKubeConfig("")
-		clientset := kubernetes.NewForConfigOrDie(restConfig)
+		clientset := k8sutil.GetClientSet()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
 		svcRef := m.apiservice.Spec.Service

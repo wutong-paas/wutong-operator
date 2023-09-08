@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -12,7 +11,6 @@ import (
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	"github.com/wutong-paas/wutong-operator/controllers/cluster-mgr/precheck"
 	"github.com/wutong-paas/wutong-operator/util/constants"
-	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -60,12 +58,6 @@ var provisionerAccessModes = map[string]corev1.PersistentVolumeAccessMode{
 	"ossplugin.csi.alibabacloud.com":  corev1.ReadWriteMany,
 }
 
-type k8sNodesSortByName []*wutongv1alpha1.K8sNode
-
-func (s k8sNodesSortByName) Len() int           { return len(s) }
-func (s k8sNodesSortByName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s k8sNodesSortByName) Less(i, j int) bool { return s[i].Name < s[j].Name }
-
 // WutongClusteMgr -
 type WutongClusteMgr struct {
 	ctx    context.Context
@@ -106,7 +98,7 @@ func (r *WutongClusteMgr) setStorageStorageClasses() {
 
 	var storageClasses []*wutongv1alpha1.StorageClass
 	for _, sc := range storageClassList.Items {
-		v, ok := sc.Annotations["storageclass.kubernetes.io/is-default-class"]
+		v, ok := sc.Annotations[constants.DefaultStorageClassAnnotationKey]
 		if ok && v == "true" {
 			r.defsc = sc.Name
 		}
@@ -164,13 +156,8 @@ func (r *WutongClusteMgr) CheckOrUpdateWutongCluster() (bool, error) {
 func (r *WutongClusteMgr) GenerateWutongClusterStatus() (*wutongv1alpha1.WutongClusterStatus, error) {
 	r.log.V(6).Info("start generating status")
 
-	masterRoleLabel, err := r.getMasterRoleLabel()
-	if err != nil {
-		return nil, fmt.Errorf("get master role label: %v", err)
-	}
-
 	s := &wutongv1alpha1.WutongClusterStatus{
-		MasterRoleLabel: masterRoleLabel,
+		MasterRoleLabel: constants.MasterNodeLabelKey,
 		StorageClasses:  r.sclist,
 	}
 
@@ -178,19 +165,13 @@ func (r *WutongClusteMgr) GenerateWutongClusterStatus() (*wutongv1alpha1.WutongC
 		s.ImagePullSecret = &corev1.LocalObjectReference{Name: WtHubCredentialsName}
 	}
 
-	var masterNodesForGateway []*wutongv1alpha1.K8sNode
-	var masterNodesForChaos []*wutongv1alpha1.K8sNode
-	if masterRoleLabel != "" {
-		masterNodesForGateway = r.listMasterNodesForGateway(masterRoleLabel)
-		masterNodesForChaos = r.listMasterNodes(masterRoleLabel)
-	}
 	s.GatewayAvailableNodes = &wutongv1alpha1.AvailableNodes{
 		SpecifiedNodes: r.listSpecifiedGatewayNodes(),
-		MasterNodes:    masterNodesForGateway,
+		MasterNodes:    wtutil.ListMasterNodesForGateway(),
 	}
 	s.ChaosAvailableNodes = &wutongv1alpha1.AvailableNodes{
 		SpecifiedNodes: r.listSpecifiedChaosNodes(),
-		MasterNodes:    masterNodesForChaos,
+		MasterNodes:    wtutil.ListMasterNodes(),
 	}
 
 	// conditions for wutong cluster status
@@ -199,87 +180,15 @@ func (r *WutongClusteMgr) GenerateWutongClusterStatus() (*wutongv1alpha1.WutongC
 	return s, nil
 }
 
-func (r *WutongClusteMgr) getMasterRoleLabel() (string, error) {
-	nodes := &corev1.NodeList{}
-	if err := r.client.List(r.ctx, nodes); err != nil {
-		r.log.Error(err, "list nodes: %v", err)
-		return "", nil
-	}
-	var label string
-	for _, node := range nodes.Items {
-		for key := range node.Labels {
-			if key == wutongv1alpha1.LabelNodeRolePrefix+"master" {
-				label = key
-			}
-			if key == wutongv1alpha1.NodeLabelRole && label != wutongv1alpha1.LabelNodeRolePrefix+"master" {
-				label = key
-			}
-		}
-	}
-	return label, nil
-}
-
 func (r *WutongClusteMgr) listSpecifiedGatewayNodes() []*wutongv1alpha1.K8sNode {
-	nodes := r.listNodesByLabels(map[string]string{
-		constants.SpecialGatewayLabelKey: "",
-	})
+	nodes := wtutil.ListNodesByLabels(constants.SpecialGatewayLabelKey)
 	// Filtering nodes with port conflicts
 	// check gateway ports
 	return wtutil.FilterNodesWithPortConflicts(nodes)
 }
 
 func (r *WutongClusteMgr) listSpecifiedChaosNodes() []*wutongv1alpha1.K8sNode {
-	return r.listNodesByLabels(map[string]string{
-		constants.SpecialChaosLabelKey: "",
-	})
-}
-
-func (r *WutongClusteMgr) listNodesByLabels(labels map[string]string) []*wutongv1alpha1.K8sNode {
-	nodeList := &corev1.NodeList{}
-	listOpts := []client.ListOption{
-		client.MatchingLabels(labels),
-	}
-	ctx, cancel := context.WithTimeout(r.ctx, time.Second*10)
-	defer cancel()
-	if err := r.client.List(ctx, nodeList, listOpts...); err != nil {
-		r.log.Error(err, "list nodes")
-		return nil
-	}
-
-	findIP := func(addresses []corev1.NodeAddress, addressType corev1.NodeAddressType) string {
-		for _, address := range addresses {
-			if address.Type == addressType {
-				return address.Address
-			}
-		}
-		return ""
-	}
-
-	var k8sNodes []*wutongv1alpha1.K8sNode
-	for _, node := range nodeList.Items {
-		k8sNode := &wutongv1alpha1.K8sNode{
-			Name:       node.Name,
-			InternalIP: findIP(node.Status.Addresses, corev1.NodeInternalIP),
-			ExternalIP: findIP(node.Status.Addresses, corev1.NodeExternalIP),
-		}
-		k8sNodes = append(k8sNodes, k8sNode)
-	}
-
-	sort.Sort(k8sNodesSortByName(k8sNodes))
-
-	return k8sNodes
-}
-
-func (r *WutongClusteMgr) listMasterNodesForGateway(masterLabel string) []*wutongv1alpha1.K8sNode {
-	nodes := r.listMasterNodes(masterLabel)
-	// Filtering nodes with port conflicts
-	// check gateway ports
-	return wtutil.FilterNodesWithPortConflicts(nodes)
-}
-
-func (r *WutongClusteMgr) listMasterNodes(masterRoleLabelKey string) []*wutongv1alpha1.K8sNode {
-	labels := k8sutil.MaterRoleLabel(masterRoleLabelKey)
-	return r.listNodesByLabels(labels)
+	return wtutil.ListNodesByLabels(constants.SpecialChaosLabelKey)
 }
 
 // CreateImagePullSecret create image pull secret
@@ -398,10 +307,6 @@ func (r *WutongClusteMgr) generateConditions() []wutongv1alpha1.WutongClusterCon
 		dnsCondition := dnsPrechecker.Check()
 		r.cluster.Status.UpdateCondition(&dnsCondition)
 	}
-	// disable kube-system namespace pod check
-	// k8sStatusPrechecker := precheck.NewK8sStatusPrechecker(r.ctx, r.cluster, r.client, r.log)
-	// k8sStatusCondition := k8sStatusPrechecker.Check()
-	// r.cluster.Status.UpdateCondition(&k8sStatusCondition)
 
 	memory := precheck.NewMemory(r.ctx, r.log, r.client)
 	memoryCondition := memory.Check()
@@ -442,17 +347,17 @@ func (r *WutongClusteMgr) runningCondition() wutongv1alpha1.WutongClusterConditi
 	// list all WutongComponents
 	WutongComponents, err := r.listWutongComponents()
 	if err != nil {
-		return wtutil.FailCondition(condition, "ListWutongComponentFailed", err.Error())
+		return FailCondition(condition, "ListWutongComponentFailed", err.Error())
 	}
 
 	for _, cpt := range WutongComponents {
 		idx, c := cpt.Status.GetCondition(wutongv1alpha1.WutongComponentReady)
 		if idx == -1 {
-			return wtutil.FailCondition(condition, "WutongComponentReadyNotFound",
+			return FailCondition(condition, "WutongComponentReadyNotFound",
 				fmt.Sprintf("condition 'WutongComponentReady' not found for %s", cpt.GetName()))
 		}
 		if c.Status == corev1.ConditionFalse {
-			return wtutil.FailCondition(condition, "WutongComponentNotReady",
+			return FailCondition(condition, "WutongComponentNotReady",
 				fmt.Sprintf("WutongComponent(%s) not ready", cpt.GetName()))
 		}
 	}
@@ -467,4 +372,12 @@ func (r *WutongClusteMgr) listWutongComponents() ([]wutongv1alpha1.WutongCompone
 		return nil, err
 	}
 	return WutongComponentList.Items, nil
+}
+
+// FailCondition -
+func FailCondition(condition wutongv1alpha1.WutongClusterCondition, reason, msg string) wutongv1alpha1.WutongClusterCondition {
+	condition.Status = corev1.ConditionFalse
+	condition.Reason = reason
+	condition.Message = msg
+	return condition
 }

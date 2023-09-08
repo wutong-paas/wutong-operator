@@ -1,5 +1,33 @@
 package constants
 
+// Keys
+const (
+	DefaultStorageClassAnnotationKey       = "storageclass.kubernetes.io/is-default-class"
+	KubeadmContainerRuntimeEndpointAnnoKey = "kubeadm.alpha.kubernetes.io/cri-socket"
+	MasterNodeLabelKey                     = "node-role.kubernetes.io/control-plane"
+)
+
+// Container Runtime
+const (
+	// ContainerRuntimeDocker docker runtime
+	ContainerRuntimeDocker = "docker"
+	// ContainerRuntimeContainerd containerd runtime
+	ContainerRuntimeContainerd = "containerd"
+
+	ContainerdConfigPath = "/etc/containerd/config.toml"
+
+	DefaultContainerdSock = "/var/run/containerd/containerd.sock"
+	K3sContainerdSock     = "/var/run/k3s/containerd/containerd.sock"
+	CriDockerdSock        = "/var/run/cri-dockerd.sock"
+	DockershimSock        = "/var/run/dockershim.sock"
+	DockerSock            = "/var/run/docker.sock"
+	CrioSock              = "/var/run/crio/crio.sock"
+
+	DefaultContainerdCertsDir = "/etc/containerd/certs.d"
+	DefaultDockerCertsDir     = "/etc/docker/certs.d"
+)
+
+// Wutong
 const (
 	// WutongSystemNamespace wt-system
 	WutongSystemNamespace = "wt-system"

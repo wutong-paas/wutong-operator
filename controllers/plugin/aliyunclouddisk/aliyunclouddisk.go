@@ -336,7 +336,7 @@ func (p *aliyunclouddiskPlugin) statefulset() client.Object {
 									Preference: corev1.NodeSelectorTerm{
 										MatchExpressions: []corev1.NodeSelectorRequirement{
 											{
-												Key:      "node-role.kubernetes.io/master",
+												Key:      constants.MasterNodeLabelKey,
 												Operator: corev1.NodeSelectorOpExists,
 											},
 										},

@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
+	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 	"github.com/wutong-paas/wutong-operator/util/retryutil"
 	"github.com/wutong-paas/wutong-operator/util/suffixdomain"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
@@ -592,14 +593,14 @@ func (r *WutongClusterReconciler) createWutongPackage() error {
 
 func (r *WutongClusterReconciler) createWutongVolumes(cluster *wutongv1alpha1.WutongCluster) error {
 	if cluster.Spec.WutongVolumeSpecRWX != nil {
-		rwx := setWutongVolume("wutongvolumerwx", constants.WutongSystemNamespace, wtutil.LabelsForAccessModeRWX(), cluster.Spec.WutongVolumeSpecRWX)
+		rwx := setWutongVolume("wutongvolumerwx", constants.WutongSystemNamespace, k8sutil.LabelsForAccessModeRWX(), cluster.Spec.WutongVolumeSpecRWX)
 		rwx.Spec.ImageRepository = constants.InstallImageRepo
 		if err := r.createResourceIfNotExists(rwx); err != nil {
 			return err
 		}
 	}
 	if cluster.Spec.WutongVolumeSpecRWO != nil {
-		rwo := setWutongVolume("wutongvolumerwo", constants.WutongSystemNamespace, wtutil.LabelsForAccessModeRWO(), cluster.Spec.WutongVolumeSpecRWO)
+		rwo := setWutongVolume("wutongvolumerwo", constants.WutongSystemNamespace, k8sutil.LabelsForAccessModeRWO(), cluster.Spec.WutongVolumeSpecRWO)
 		rwo.Spec.ImageRepository = constants.InstallImageRepo
 		if err := r.createResourceIfNotExists(rwo); err != nil {
 			return err

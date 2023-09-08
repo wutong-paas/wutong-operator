@@ -7,7 +7,6 @@ import (
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
-	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -164,7 +163,7 @@ func (g *gateway) daemonset() client.Object {
 }
 
 func listMasterNodesForGateway() []*wutongv1alpha1.K8sNode {
-	nodes := k8sutil.ListMasterNodes()
+	nodes := wtutil.ListMasterNodes()
 	// Filtering nodes with port conflicts
 	// check gateway ports
 	return wtutil.FilterNodesWithPortConflicts(nodes)

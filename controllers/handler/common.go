@@ -13,6 +13,7 @@ import (
 
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
 	"github.com/wutong-paas/wutong-operator/util/constants"
+	"github.com/wutong-paas/wutong-operator/util/k8sutil"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
@@ -199,9 +200,9 @@ func storageClassNameFromWutongVolumeRWO(ctx context.Context, cli client.Client,
 func storageClassNameFromWutongVolume(ctx context.Context, cli client.Client, ns string, rwo bool) (*pvcParameters, error) {
 	var labels map[string]string
 	if rwo {
-		labels = wtutil.LabelsForAccessModeRWO()
+		labels = k8sutil.LabelsForAccessModeRWO()
 	} else {
-		labels = wtutil.LabelsForAccessModeRWX()
+		labels = k8sutil.LabelsForAccessModeRWX()
 	}
 	volumeList := &wutongv1alpha1.WutongVolumeList{}
 	var opts []client.ListOption

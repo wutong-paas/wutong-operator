@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,12 +33,6 @@ const (
 	InstallationModeFullOnline InstallMode = "FullOnline"
 	// InstallationModeOffline install by local resource
 	InstallationModeOffline InstallMode = "Offline"
-
-	// LabelNodeRolePrefix is a label prefix for node roles
-	// It's copied over to here until it's merged in core: https://github.com/kubernetes/kubernetes/pull/39112
-	LabelNodeRolePrefix = "node-role.kubernetes.io/"
-	// NodeLabelRole specifies the role of a node
-	NodeLabelRole = "kubernetes.io/role"
 )
 
 // WutongClusterConditionType is the type of wutongclsuter condition.
@@ -290,7 +283,7 @@ func (in *Database) RegionDataSource() string {
 }
 
 // NewWutongClusterCondition creates a new rianbondcluster condition.
-func NewWutongClusterCondition(condType WutongClusterConditionType, status v1.ConditionStatus, reason, message string) *WutongClusterCondition {
+func NewWutongClusterCondition(condType WutongClusterConditionType, status corev1.ConditionStatus, reason, message string) *WutongClusterCondition {
 	return &WutongClusterCondition{
 		Type:               condType,
 		Status:             status,

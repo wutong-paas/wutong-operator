@@ -33,11 +33,8 @@ import (
 	"github.com/containerd/containerd/images"
 	cdocker "github.com/containerd/containerd/remotes/docker"
 	"github.com/containerd/containerd/remotes/docker/config"
-	"github.com/docker/distribution/reference"
 	dtypes "github.com/docker/docker/api/types"
-	dclient "github.com/docker/docker/client"
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
 	"github.com/wutong-paas/wutong-operator/util/constants"
 	"github.com/wutong-paas/wutong-operator/util/downloadutil"
@@ -588,15 +585,7 @@ func (p *pkg) handle() error {
 
 	if p.canPushImage() {
 		// Deprecated: No longer download the installation package
-		if p.downloadPackage {
-			p.log.Info("start load and push images")
-			if err := p.imagesLoadAndPush(); err != nil {
-				p.updateConditionStatus(wutongv1alpha1.PushImage, wutongv1alpha1.Failed)
-				p.updateConditionResion(wutongv1alpha1.PushImage, err.Error(), "load and push images failure")
-				_ = p.updateCRStatus()
-				return fmt.Errorf("failed to load and push images: %v", err)
-			}
-		} else {
+		if !p.downloadPackage {
 			p.log.Info("start pull and push images")
 			if err := p.imagePullAndPush(); err != nil {
 				p.updateConditionStatus(wutongv1alpha1.PushImage, wutongv1alpha1.Failed)
@@ -705,87 +694,6 @@ func (p *pkg) imagePullAndPush() error {
 	return nil
 }
 
-func (p *pkg) imagesLoadAndPush() error {
-	return nil
-	// p.pkg.Status.ImagesNumber = countImages(pkgDst)
-	// p.pkg.Status.ImagesPushed = nil
-	// var count int32
-	// walkFn := func(pstr string, info os.FileInfo, err error) error {
-	// 	l := p.log.WithValues("file", pstr)
-	// 	if err != nil {
-	// 		l.Info(fmt.Sprintf("prevent panic by handling failure accessing a path %q: %v\n", pstr, err))
-	// 		return fmt.Errorf("prevent panic by handling failure accessing a path %q: %v", pstr, err)
-	// 	}
-	// 	if !commonutil.IsFile(pstr) {
-	// 		return nil
-	// 	}
-	// 	if !validateFile(pstr) {
-	// 		l.Info("invalid file, skip it1")
-	// 		return nil
-	// 	}
-
-	// 	f := func() (bool, error) {
-	// 		image, err := p.imageLoad(pstr)
-	// 		if err != nil {
-	// 			l.Error(err, "load image")
-	// 			return false, fmt.Errorf("load image: %v", err)
-	// 		}
-
-	// 		newImage := newImageWithNewDomain(image, wtutil.GetImageRepository(p.cluster))
-	// 		if newImage == "" {
-	// 			return false, fmt.Errorf("parse image name failure")
-	// 		}
-
-	// 		if err := p.dcli.ImageTag(p.ctx, image, newImage); err != nil {
-	// 			l.Error(err, "tag image", "source", image, "target", newImage)
-	// 			return false, fmt.Errorf("tag image: %v", err)
-	// 		}
-
-	// 		if err = p.imagePush(newImage); err != nil {
-	// 			l.Error(err, "push image", "image", newImage)
-	// 			return false, fmt.Errorf("push image %s: %v", newImage, err)
-	// 		}
-	// 		count++
-	// 		p.pkg.Status.ImagesPushed = append(p.pkg.Status.ImagesPushed, wutongv1alpha1.WutongPackageImage{Name: newImage})
-	// 		progress := count * 100 / p.pkg.Status.ImagesNumber
-	// 		if p.updateConditionProgress(wutongv1alpha1.PushImage, progress) {
-	// 			if err := p.updateCRStatus(); err != nil {
-	// 				return false, fmt.Errorf("update cr status: %v", err)
-	// 			}
-	// 		}
-	// 		l.Info("successfully load image", "image", newImage)
-	// 		return true, nil
-	// 	}
-
-	// 	return retryutil.Retry(1*time.Second, 3, f)
-	// }
-
-	// return filepath.Walk(pkgDst, walkFn)
-}
-
-func (p *pkg) imageLoad(file string) (string, error) {
-	p.log.Info("start loading image", "file", file)
-	f, err := os.Open(file)
-	if err != nil {
-		return "", fmt.Errorf("open file %s: %v", file, err)
-	}
-	defer f.Close()
-	var imageNames []images.Image
-	if imageNames, err = p.containerdCli.ContainerdClient.Import(p.containerdCli.CCtx, f); err != nil {
-		logrus.Errorf("load image from file %s failure %s", f.Name(), err.Error())
-	}
-	if err != nil {
-		return "", fmt.Errorf("path: %s; failed to load images: %v", file, err)
-	}
-	var imageName string
-	imageName = imageNames[0].Name
-	if imageName == "" {
-		return "", fmt.Errorf("not parse image name")
-	}
-	p.log.Info("success loading image", "image", imageName)
-	return imageName, nil
-}
-
 func (p *pkg) imagePush(image images.Image) error {
 	p.log.Info("start push image", "image", image.Name)
 	defaultTLS := &tls.Config{
@@ -819,34 +727,6 @@ func EncodeAuthToBase64(authConfig dtypes.AuthConfig) (string, error) {
 	return base64.URLEncoding.EncodeToString(buf), nil
 }
 
-func newDockerClient(ctx context.Context) (*dclient.Client, error) {
-	// cli, err := dclient.NewClientWithOpts(dclient.FromEnv)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("create new docker client: %v", err)
-	// }
-	// cli.NegotiateAPIVersion(ctx)
-
-	// return cli, nil
-	return nil, nil
-}
-
-func parseImageName(str string) string {
-	if !strings.Contains(str, "Loaded image: ") {
-		return ""
-	}
-	str = strings.Replace(str, "Loaded image: ", "", -1)
-	str = strings.Replace(str, "\n", "", -1)
-	str = trimLatest(str)
-	return str
-}
-
-func trimLatest(str string) string {
-	if !strings.HasSuffix(str, ":latest") {
-		return str
-	}
-	return str[:len(str)-len(":latest")]
-}
-
 func countImages(dir string) int32 {
 	var count int32
 	_ = filepath.Walk(dir, func(pstr string, info os.FileInfo, err error) error {
@@ -874,54 +754,7 @@ func validateFile(file string) bool {
 	return true
 }
 
-func newImageWithNewDomain(image string, newDomain string) string {
-	repo, err := reference.Parse(image)
-	if err != nil {
-		return ""
-	}
-	named := repo.(reference.Named)
-	remoteName := reference.Path(named)
-	tag := "latest"
-	if t, ok := repo.(reference.Tagged); ok {
-		tag = t.Tag()
-	}
-	return path.Join(newDomain, remoteName+":"+tag)
-}
-
-func (p *pkg) checkIfImageExists(image string) (bool, error) {
-	return true, nil
-	// repo, err := reference.Parse(image)
-	// if err != nil {
-	// 	p.log.V(6).Info("parse image", "image", image, "error", err)
-	// 	return false, fmt.Errorf("parse image %s: %v", image, err)
-	// }
-	// named := repo.(reference.Named)
-	// tag := "latest"
-	// if t, ok := repo.(reference.Tagged); ok {
-	// 	tag = t.Tag()
-	// }
-	// imageFullName := named.Name() + ":" + tag
-
-	// ctx, cancel := context.WithCancel(p.ctx)
-	// defer cancel()
-
-	// imageSummarys, err := p.dcli.ImageList(ctx, dtypes.ImageListOptions{
-	// 	Filters: filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: imageFullName}),
-	// })
-	// if err != nil {
-	// 	return false, fmt.Errorf("list images: %v", err)
-	// }
-	// for _, imageSummary := range imageSummarys {
-	// 	fmt.Printf("%#v", imageSummary.RepoTags)
-	// }
-
-	// _ = imageSummarys
-
-	// return len(imageSummarys) > 0, nil
-}
-
 func (p *pkg) isImageRepositoryReady() bool {
-
 	idx, condition := p.cluster.Status.GetCondition(wutongv1alpha1.WutongClusterConditionTypeImageRepository)
 	if idx == -1 {
 		return false

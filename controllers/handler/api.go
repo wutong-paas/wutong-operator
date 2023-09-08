@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/wutong-paas/wutong-operator/util/k8sutil"
+	"github.com/wutong-paas/wutong-operator/util/wtutil"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
@@ -406,10 +407,10 @@ func (a *api) secretAndConfigMapForAPI() []client.Object {
 			Namespace: a.component.Namespace,
 		},
 		Data: map[string]string{
-			"apiAddress":          fmt.Sprintf("https://%s:%d", GatewayIngressIP(a.cluster), 8443),
-			"websocketAddress":    fmt.Sprintf("ws://%s:%d", GatewayIngressIP(a.cluster), 6060),
+			"apiAddress":          fmt.Sprintf("https://%s:%d", wtutil.GatewayIngressIP(a.cluster), 8443),
+			"websocketAddress":    fmt.Sprintf("ws://%s:%d", wtutil.GatewayIngressIP(a.cluster), 6060),
 			"defaultDomainSuffix": a.cluster.Spec.SuffixHTTPHost,
-			"defaultTCPHost":      GatewayIngressIP(a.cluster),
+			"defaultTCPHost":      wtutil.GatewayIngressIP(a.cluster),
 		},
 		BinaryData: map[string][]byte{
 			"client.pem":     clientPem,
@@ -421,11 +422,7 @@ func (a *api) secretAndConfigMapForAPI() []client.Object {
 }
 
 func (a *api) ingressForAPI() client.Object {
-	annotations := map[string]string{
-		"nginx.ingress.kubernetes.io/l4-enable": "true",
-		"nginx.ingress.kubernetes.io/l4-host":   "0.0.0.0",
-		"nginx.ingress.kubernetes.io/l4-port":   "8443",
-	}
+	annotations := wtutil.TCPIngressAnnotationsFromPort("8443")
 	if k8sutil.GetKubeVersion().AtLeast(utilversion.MustParseSemantic("v1.19.0")) {
 		return createIngress(APIName, a.component.Namespace, annotations, a.labels, APIName+"-api", "https")
 	}
@@ -433,11 +430,7 @@ func (a *api) ingressForAPI() client.Object {
 }
 
 func (a *api) ingressForAPIHealthz() client.Object {
-	annotations := map[string]string{
-		"nginx.ingress.kubernetes.io/l4-enable": "true",
-		"nginx.ingress.kubernetes.io/l4-host":   "0.0.0.0",
-		"nginx.ingress.kubernetes.io/l4-port":   "8889",
-	}
+	annotations := wtutil.TCPIngressAnnotationsFromPort("8889")
 	if k8sutil.GetKubeVersion().AtLeast(utilversion.MustParseSemantic("v1.19.0")) {
 		return createIngress(APIName+"-healthz", a.component.Namespace, annotations, a.labels, APIName+"-healthz", "healthz")
 	}
@@ -445,11 +438,7 @@ func (a *api) ingressForAPIHealthz() client.Object {
 }
 
 func (a *api) ingressForWebsocket() client.Object {
-	annotations := map[string]string{
-		"nginx.ingress.kubernetes.io/l4-enable": "true",
-		"nginx.ingress.kubernetes.io/l4-host":   "0.0.0.0",
-		"nginx.ingress.kubernetes.io/l4-port":   "6060",
-	}
+	annotations := wtutil.TCPIngressAnnotationsFromPort("6060")
 	if k8sutil.GetKubeVersion().AtLeast(utilversion.MustParseSemantic("v1.19.0")) {
 		return createIngress(APIName+"-websocket", a.component.Namespace, annotations, a.labels, APIName+"-websocket", "ws")
 	}
