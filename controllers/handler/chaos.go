@@ -409,7 +409,6 @@ func volumesByContainerRuntime(containerRuntime, sock string) ([]corev1.Volume, 
 
 	switch containerRuntime {
 	case constants.ContainerRuntimeContainerd:
-
 		volumes = append(volumes, corev1.Volume{
 			Name: "containerdsock",
 			VolumeSource: corev1.VolumeSource{

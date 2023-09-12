@@ -250,7 +250,7 @@ func GetContainerRuntime() *containerRuntime {
 		containerRuntimeInstance.Name = constants.ContainerRuntimeContainerd
 	}
 
-	if containerRuntimeInstance.Endpoint != "" {
+	if containerRuntimeInstance.Endpoint == "" {
 		switch containerRuntimeInstance.Name {
 		case constants.ContainerRuntimeContainerd:
 			var endpoint string
