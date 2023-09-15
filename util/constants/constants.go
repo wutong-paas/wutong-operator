@@ -14,7 +14,8 @@ const (
 	// ContainerRuntimeContainerd containerd runtime
 	ContainerRuntimeContainerd = "containerd"
 
-	ContainerdConfigPath = "/etc/containerd/config.toml"
+	ContainerdConfigPath   = "/etc/containerd/config.toml"
+	K3sContainerConfigPath = "/var/lib/rancher/k3s/agent/etc/containerd/config.toml"
 
 	DefaultContainerdSock = "/run/containerd/containerd.sock"
 	K3sContainerdSock     = "/run/k3s/containerd/containerd.sock"
