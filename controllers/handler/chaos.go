@@ -488,6 +488,21 @@ func volumesByContainerRuntime(containerRuntime, sock string) ([]corev1.Volume, 
 			Name:      "docker-sock",
 			MountPath: sock,
 		})
+		if sock != constants.DockerSock {
+			volumes = append(volumes, corev1.Volume{
+				Name: "docker-base-sock",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: constants.DockerSock,
+					},
+				},
+			})
+
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "docker-base-sock",
+				MountPath: constants.DockerSock,
+			})
+		}
 	}
 
 	return volumes, volumeMounts
