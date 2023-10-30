@@ -409,9 +409,8 @@ func volumesByContainerRuntime(containerRuntime, sock string) ([]corev1.Volume, 
 
 	switch containerRuntime {
 	case constants.ContainerRuntimeContainerd:
-
 		volumes = append(volumes, corev1.Volume{
-			Name: "containerdsock",
+			Name: "containerd-sock",
 			VolumeSource: corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
 					Path: sock,
@@ -419,7 +418,7 @@ func volumesByContainerRuntime(containerRuntime, sock string) ([]corev1.Volume, 
 			},
 		})
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "containerdsock",
+			Name:      "containerd-sock",
 			MountPath: sock,
 		})
 
@@ -447,15 +446,38 @@ func volumesByContainerRuntime(containerRuntime, sock string) ([]corev1.Volume, 
 						Type: k8sutil.HostPath(corev1.HostPathDirectoryOrCreate),
 					},
 				},
+			}, corev1.Volume{
+				Name: "k3s-containerd-config",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: constants.K3sContainerConfigPath,
+					},
+				},
 			})
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
 				Name:      "k3s-containerd-registry",
 				MountPath: k3sRegistryConfigPath,
+			}, corev1.VolumeMount{
+				Name:      "k3s-containerd-config",
+				MountPath: constants.ContainerdConfigPath,
+			})
+		} else {
+			volumes = append(volumes, corev1.Volume{
+				Name: "containerd-config",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: constants.ContainerdConfigPath,
+					},
+				},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "containerd-config",
+				MountPath: constants.ContainerdConfigPath,
 			})
 		}
 	case constants.ContainerRuntimeDocker:
 		volumes = append(volumes, corev1.Volume{
-			Name: "dockersock",
+			Name: "docker-sock",
 			VolumeSource: corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
 					Path: sock,
@@ -463,9 +485,24 @@ func volumesByContainerRuntime(containerRuntime, sock string) ([]corev1.Volume, 
 			},
 		})
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "dockersock",
+			Name:      "docker-sock",
 			MountPath: sock,
 		})
+		if sock != constants.DockerSock {
+			volumes = append(volumes, corev1.Volume{
+				Name: "docker-base-sock",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: constants.DockerSock,
+					},
+				},
+			})
+
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "docker-base-sock",
+				MountPath: constants.DockerSock,
+			})
+		}
 	}
 
 	return volumes, volumeMounts

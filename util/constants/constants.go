@@ -14,14 +14,15 @@ const (
 	// ContainerRuntimeContainerd containerd runtime
 	ContainerRuntimeContainerd = "containerd"
 
-	ContainerdConfigPath = "/etc/containerd/config.toml"
+	ContainerdConfigPath   = "/etc/containerd/config.toml"
+	K3sContainerConfigPath = "/var/lib/rancher/k3s/agent/etc/containerd/config.toml"
 
-	DefaultContainerdSock = "/var/run/containerd/containerd.sock"
-	K3sContainerdSock     = "/var/run/k3s/containerd/containerd.sock"
-	CriDockerdSock        = "/var/run/cri-dockerd.sock"
-	DockershimSock        = "/var/run/dockershim.sock"
-	DockerSock            = "/var/run/docker.sock"
-	CrioSock              = "/var/run/crio/crio.sock"
+	DefaultContainerdSock = "/run/containerd/containerd.sock"
+	K3sContainerdSock     = "/run/k3s/containerd/containerd.sock"
+	CriDockerdSock        = "/run/cri-dockerd.sock"
+	DockershimSock        = "/run/dockershim.sock"
+	DockerSock            = "/run/docker.sock"
+	CrioSock              = "/run/crio/crio.sock"
 
 	DefaultContainerdCertsDir = "/etc/containerd/certs.d"
 	DefaultDockerCertsDir     = "/etc/docker/certs.d"
@@ -72,5 +73,5 @@ const (
 	InstallImageRepo = "swr.cn-southwest-2.myhuaweicloud.com/wutong"
 
 	// DefaultInstallVersion default install version
-	DefaultInstallVersion = "v1.5.0"
+	DefaultInstallVersion = "v1.6.0"
 )

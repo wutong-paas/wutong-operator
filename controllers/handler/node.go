@@ -117,7 +117,7 @@ func (n *node) volumesByContainerRuntime(containerRuntime, sock string) ([]corev
 	case constants.ContainerRuntimeContainerd:
 		volumes = []corev1.Volume{
 			{
-				Name: "containerdsock",
+				Name: "containerd-sock",
 				VolumeSource: corev1.VolumeSource{
 					HostPath: &corev1.HostPathVolumeSource{
 						Path: sock,
@@ -137,7 +137,7 @@ func (n *node) volumesByContainerRuntime(containerRuntime, sock string) ([]corev
 		}
 		volumeMounts = []corev1.VolumeMount{
 			{
-				Name:      "containerdsock", // default using containerd
+				Name:      "containerd-sock", // default using containerd
 				MountPath: sock,
 			},
 			{
@@ -166,7 +166,7 @@ func (n *node) volumesByContainerRuntime(containerRuntime, sock string) ([]corev
 				},
 			},
 			{
-				Name: "dockercert",
+				Name: "docker-cert",
 				VolumeSource: corev1.VolumeSource{
 					HostPath: &corev1.HostPathVolumeSource{
 						Path: constants.DefaultDockerCertsDir,
@@ -175,7 +175,7 @@ func (n *node) volumesByContainerRuntime(containerRuntime, sock string) ([]corev
 				},
 			},
 			{
-				Name: "dockersock",
+				Name: "docker-sock",
 				VolumeSource: corev1.VolumeSource{
 					HostPath: &corev1.HostPathVolumeSource{
 						Path: sock,
@@ -186,7 +186,7 @@ func (n *node) volumesByContainerRuntime(containerRuntime, sock string) ([]corev
 		}
 		volumeMounts = []corev1.VolumeMount{
 			{
-				Name:      "dockersock",
+				Name:      "docker-sock",
 				MountPath: sock,
 			},
 			{
@@ -198,9 +198,24 @@ func (n *node) volumesByContainerRuntime(containerRuntime, sock string) ([]corev
 				MountPath: "/var/docker/lib",
 			},
 			{
-				Name:      "dockercert",
+				Name:      "docker-cert",
 				MountPath: constants.DefaultDockerCertsDir,
 			},
+		}
+		if sock != constants.DockerSock {
+			volumes = append(volumes, corev1.Volume{
+				Name: "docker-base-sock",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: constants.DockerSock,
+					},
+				},
+			})
+
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "docker-base-sock",
+				MountPath: constants.DockerSock,
+			})
 		}
 	}
 
