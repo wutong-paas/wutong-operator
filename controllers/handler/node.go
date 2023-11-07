@@ -14,6 +14,7 @@ import (
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -352,6 +353,17 @@ func (n *node) daemonSetForWutongNode() client.Object {
 	if n.component.Spec.Affinity != nil {
 		affinity = n.component.Spec.Affinity
 	}
+	resources := corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("2Gi"),
+			corev1.ResourceCPU:    resource.MustParse("250m"),
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+		},
+	}
+	resources = mergeResources(resources, n.component.Spec.Resources)
 	ds := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      NodeName,
@@ -386,6 +398,7 @@ func (n *node) daemonSetForWutongNode() client.Object {
 							Args:            args,
 							VolumeMounts:    volumeMounts,
 							ReadinessProbe:  readinessProbe,
+							Resources:       resources,
 						},
 					},
 					Volumes: volumes,

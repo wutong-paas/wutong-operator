@@ -13,6 +13,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -217,6 +218,18 @@ func (e *eventlog) statefulset() client.Object {
 	volumes = mergeVolumes(volumes, e.component.Spec.Volumes)
 	args = mergeArgs(args, e.component.Spec.Args)
 
+	resources := corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("4Gi"),
+			corev1.ResourceCPU:    resource.MustParse("500m"),
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("512Mi"),
+			corev1.ResourceCPU:    resource.MustParse("200m"),
+		},
+	}
+	resources = mergeResources(resources, e.component.Spec.Resources)
+
 	// prepare probe
 	readinessProbe := probeutil.MakeReadinessProbeTCP("", 6363)
 	sts := &appsv1.StatefulSet{
@@ -247,7 +260,7 @@ func (e *eventlog) statefulset() client.Object {
 							Args:            args,
 							VolumeMounts:    volumeMounts,
 							ReadinessProbe:  readinessProbe,
-							Resources:       e.component.Spec.Resources,
+							Resources:       resources,
 						},
 					},
 					Volumes: volumes,
