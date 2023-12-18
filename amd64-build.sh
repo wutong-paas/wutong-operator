@@ -2,7 +2,7 @@
 
 WUTONG_REGISTRY=${WUTONG_REGISTRY:-'swr.cn-southwest-2.myhuaweicloud.com/wutong'}
 IMAGE_NAME=wutong-operator
-VERSION=v1.6.0-amd64
+VERSION=v1.9.0-amd64
 
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o ./bin/amd64/manager main.go
 
