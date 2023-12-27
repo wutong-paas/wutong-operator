@@ -281,8 +281,9 @@ func (c *chaos) deployment() client.Object {
 							Operator: corev1.TolerationOpExists, // tolerate everything.
 						},
 					},
-					HostAliases: hostsAliases(c.cluster),
-					Affinity:    affinity,
+					PriorityClassName: constants.WutongPlatformComponentPriorityClassName,
+					HostAliases:       hostsAliases(c.cluster),
+					Affinity:          affinity,
 					Containers: []corev1.Container{
 						{
 							Name:            ChaosName,

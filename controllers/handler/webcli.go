@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
+	"github.com/wutong-paas/wutong-operator/util/constants"
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -121,7 +122,8 @@ func (w *webcli) deployment() client.Object {
 							Resources:    w.component.Spec.Resources,
 						},
 					},
-					Volumes: volumes,
+					PriorityClassName: constants.WutongPlatformComponentPriorityClassName,
+					Volumes:           volumes,
 				},
 			},
 		},

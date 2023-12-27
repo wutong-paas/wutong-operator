@@ -7,6 +7,7 @@ import (
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	"github.com/wutong-paas/wutong-operator/util/commonutil"
+	"github.com/wutong-paas/wutong-operator/util/constants"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -153,7 +154,8 @@ func (g *gateway) daemonset() client.Object {
 							Env: g.component.Spec.Env,
 						},
 					},
-					Volumes: volumes,
+					PriorityClassName: constants.WutongPlatformComponentPriorityClassName,
+					Volumes:           volumes,
 				},
 			},
 		},

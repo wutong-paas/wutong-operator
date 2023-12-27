@@ -13,6 +13,7 @@ import (
 	"github.com/wutong-paas/wutong-operator/util/retryutil"
 	"github.com/wutong-paas/wutong-operator/util/suffixdomain"
 	"github.com/wutong-paas/wutong-operator/util/wtutil"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -173,6 +174,10 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	r.ReconcileLightweightInstall(ctx, wutongcluster)
+
+	if err := r.createPriorityClass(); err != nil {
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, fmt.Errorf("create priority class failure %s", err.Error())
+	}
 
 	if err := r.createWutongVolumes(wutongcluster); err != nil {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, fmt.Errorf("create wutong volume failure %s", err.Error())
@@ -636,4 +641,16 @@ func setWutongVolume(name, namespace string, labels map[string]string, spec *wut
 		Spec: *spec,
 	}
 	return volume
+}
+
+func (r *WutongClusterReconciler) createPriorityClass() error {
+	priorityClass := &schedulingv1.PriorityClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: constants.WutongPlatformComponentPriorityClassName,
+		},
+		Value:         1000000000,
+		GlobalDefault: false,
+		Description:   "This priority class is used for wutong platform components",
+	}
+	return r.createResourceIfNotExists(priorityClass)
 }

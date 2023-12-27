@@ -231,6 +231,7 @@ func (a *api) deployment() client.Object {
 							Resources:       a.component.Spec.Resources,
 						},
 					},
+					PriorityClassName:  constants.WutongPlatformComponentPriorityClassName,
 					ServiceAccountName: "wutong-operator",
 					Volumes:            volumes,
 				},

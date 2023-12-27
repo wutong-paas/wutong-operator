@@ -7,6 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/wutong-paas/wutong-operator/util/constants"
 	"github.com/wutong-paas/wutong-operator/util/probeutil"
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
@@ -170,7 +171,8 @@ func (m *monitor) statefulset() client.Object {
 							Resources:       resources,
 						},
 					},
-					Volumes: volumes,
+					PriorityClassName: constants.WutongPlatformComponentPriorityClassName,
+					Volumes:           volumes,
 				},
 			},
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{*promDataPVC},
