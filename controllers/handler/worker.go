@@ -179,6 +179,10 @@ func (w *worker) deployment() client.Object {
 			Name:  "BUILD_IMAGE_REPOSTORY_PASS",
 			Value: imageHub.Password,
 		})
+		env = append(env, corev1.EnvVar{
+			Name:  "XDS_HOST_IP",
+			Value: fmt.Sprintf("%s.%s", NodeXDSServiceName, constants.WutongSystemNamespace),
+		})
 	}
 
 	args = mergeArgs(args, w.component.Spec.Args)

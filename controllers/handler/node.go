@@ -16,11 +16,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NodeName name for wt-node
 var NodeName = "wt-node"
+var NodeXDSServiceName = NodeName + "-xds"
 
 type node struct {
 	ctx    context.Context
@@ -75,6 +77,7 @@ func (n *node) Before() error {
 func (n *node) Resources() []client.Object {
 	return []client.Object{
 		n.daemonSetForWutongNode(),
+		n.serviceFroWutongNode(),
 	}
 }
 
@@ -339,6 +342,8 @@ func (n *node) daemonSetForWutongNode() client.Object {
 
 	// prepare probe
 	readinessProbe := probeutil.MakeReadinessProbeHTTP("", "/v2/ping", 6100)
+	startupProbe := probeutil.MakeProbe(probeutil.ProbeKindHTTP, "", "/v2/ping", 6100, corev1.URISchemeHTTP, nil)
+	probeutil.SetProbeArgs(startupProbe, 10, 5, 5, 0, 5)
 	args = mergeArgs(args, n.component.Spec.Args)
 	tolerations := []corev1.Toleration{
 		{
@@ -398,6 +403,7 @@ func (n *node) daemonSetForWutongNode() client.Object {
 							Args:            args,
 							VolumeMounts:    volumeMounts,
 							ReadinessProbe:  readinessProbe,
+							StartupProbe:    startupProbe,
 							Resources:       resources,
 						},
 					},
@@ -409,4 +415,32 @@ func (n *node) daemonSetForWutongNode() client.Object {
 	}
 
 	return ds
+}
+
+func (n *node) serviceFroWutongNode() client.Object {
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      NodeXDSServiceName,
+			Namespace: n.component.Namespace,
+			Labels:    n.labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: n.labels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "tcp-6100",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       6100,
+					TargetPort: intstr.FromInt(6100),
+				},
+				{
+					Name:       "tcp-6101",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       6101,
+					TargetPort: intstr.FromInt(6101),
+				},
+			},
+		},
+	}
+	return svc
 }
