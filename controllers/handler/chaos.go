@@ -104,14 +104,22 @@ func (c *chaos) SetStorageClassNameRWX(pvcParametersRWX *pvcParameters) {
 
 func (c *chaos) ResourcesCreateIfNotExists() []client.Object {
 	if c.component.Labels["persistentVolumeClaimAccessModes"] == string(corev1.ReadWriteOnce) {
-		return []client.Object{
+		result := []client.Object{
 			createPersistentVolumeClaimRWO(c.component.Namespace, constants.WTDataPVC, c.pvcParametersRWX, c.labels, c.wtdataStorageRequest),
-			createPersistentVolumeClaimRWO(c.component.Namespace, constants.CachePVC, c.pvcParametersRWX, c.labels, c.cacheStorageRequest),
 		}
-	}
-	return []client.Object{
-		createPersistentVolumeClaimRWX(c.component.Namespace, constants.WTDataPVC, c.pvcParametersRWX, c.labels, c.wtdataStorageRequest),
-		createPersistentVolumeClaimRWX(c.component.Namespace, constants.CachePVC, c.pvcParametersRWX, c.labels, c.cacheStorageRequest),
+		if c.cluster.Spec.CacheMode != "hostpath" {
+			result = append(result, createPersistentVolumeClaimRWO(c.component.Namespace, constants.CachePVC, c.pvcParametersRWX, c.labels, c.cacheStorageRequest))
+		}
+		return result
+	} else {
+
+		result := []client.Object{
+			createPersistentVolumeClaimRWX(c.component.Namespace, constants.WTDataPVC, c.pvcParametersRWX, c.labels, c.wtdataStorageRequest),
+		}
+		if c.cluster.Spec.CacheMode != "hostpath" {
+			result = append(result, createPersistentVolumeClaimRWX(c.component.Namespace, constants.CachePVC, c.pvcParametersRWX, c.labels, c.cacheStorageRequest))
+		}
+		return result
 	}
 }
 

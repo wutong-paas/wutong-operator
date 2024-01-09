@@ -38,7 +38,7 @@ func NewResourceProxy(ctx context.Context, client client.Client, component *wuto
 		component:      component,
 		cluster:        cluster,
 		labels:         LabelsForWutongComponent(component),
-		storageRequest: getStorageRequest("RESOURCE_PROXY_DATA_STORAGE_REQUEST", 21),
+		storageRequest: getStorageRequest("RESOURCE_PROXY_DATA_STORAGE_REQUEST", 20),
 	}
 }
 
@@ -66,8 +66,8 @@ func (r *resourceProxy) SetStorageClassNameRWO(pvcParameters *pvcParameters) {
 }
 
 func (r *resourceProxy) resource() []client.Object {
-	claimName := "data"
-	resourceProxyDataPVC := createPersistentVolumeClaimRWO(r.component.Namespace, claimName, r.pvcParametersRWO, r.labels, r.storageRequest)
+	claimName := ResourceProxyName + "-data"
+	resourceProxyDataPVC := createPersistentVolumeClaimRWX(r.component.Namespace, claimName, r.pvcParametersRWO, r.labels, r.storageRequest)
 
 	volumeMounts := []corev1.VolumeMount{
 		{

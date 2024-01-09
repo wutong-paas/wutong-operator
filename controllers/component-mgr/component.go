@@ -63,7 +63,16 @@ func (r *WutongComponentMgr) UpdateStatus() error {
 	r.cpt.Status = *status
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		return r.client.Status().Update(r.ctx, r.cpt)
+		err := r.client.Status().Update(r.ctx, r.cpt)
+		if err != nil {
+			var latestCpt wutongv1alpha1.WutongComponent
+			getErr := r.client.Get(r.ctx, types.NamespacedName{Name: r.cpt.GetName(), Namespace: r.cpt.GetNamespace()}, &latestCpt)
+			if getErr != nil {
+				return getErr
+			}
+			r.cpt.SetResourceVersion(latestCpt.ResourceVersion)
+		}
+		return err
 	})
 }
 
