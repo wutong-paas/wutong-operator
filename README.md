@@ -13,3 +13,4 @@
 | v1.8.0                    | v1.8.0           | Release     |
 | v1.9.0                    | v1.9.0           | Release     |
 | v1.10.0                   | v1.10.0          | Release     |
+| v1.11.0                   | v1.11.0          | Release     |

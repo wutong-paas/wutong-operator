@@ -128,6 +128,7 @@ type WutongClusterSpec struct {
 	EtcdConfig *EtcdConfig `json:"etcdConfig,omitempty"`
 	// define install wutong version, This is usually image tag
 	InstallVersion string `json:"installVersion,omitempty"`
+	// Deprecated. Use InstallVersion instead.
 	// CIVersion define builder and runner version
 	CIVersion string `json:"ciVersion,omitempty"`
 	// Whether the configuration has been completed
