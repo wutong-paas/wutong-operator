@@ -343,7 +343,7 @@ func (n *node) daemonSetForWutongNode() client.Object {
 	// prepare probe
 	readinessProbe := probeutil.MakeReadinessProbeHTTP("", "/v2/ping", 6100)
 	startupProbe := probeutil.MakeProbe(probeutil.ProbeKindHTTP, "", "/v2/ping", 6100, corev1.URISchemeHTTP, nil)
-	probeutil.SetProbeArgs(startupProbe, 10, 5, 5, 0, 5)
+	probeutil.SetProbeArgs(startupProbe, 10, 10, 10, 1, 30)
 	args = mergeArgs(args, n.component.Spec.Args)
 	tolerations := []corev1.Toleration{
 		{
