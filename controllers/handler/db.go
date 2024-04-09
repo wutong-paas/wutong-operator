@@ -219,7 +219,14 @@ func (d *db) statefulsetForDB() client.Object {
 
 	tolerations := []corev1.Toleration{
 		{
-			Operator: corev1.TolerationOpExists, // tolerate everything.
+			// tolerate control plane taints
+			Key:      "node-role.kubernetes.io/control-plane",
+			Operator: corev1.TolerationOpExists,
+		},
+		{
+			// tolerate master taints
+			Key:      "node-role.kubernetes.io/master",
+			Operator: corev1.TolerationOpExists,
 		},
 	}
 
