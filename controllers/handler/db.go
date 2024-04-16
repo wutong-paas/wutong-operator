@@ -50,6 +50,10 @@ var _ ClusterScopedResourcesCreator = &db{}
 
 // NewDB new db
 func NewDB(ctx context.Context, client client.Client, component *wutongv1alpha1.WutongComponent, cluster *wutongv1alpha1.WutongCluster) ComponentHandler {
+	regionDBName := os.Getenv("REGION_DB_NAME")
+	if regionDBName == "" {
+		regionDBName = "region"
+	}
 	d := &db{
 		ctx:            ctx,
 		client:         client,
@@ -58,14 +62,10 @@ func NewDB(ctx context.Context, client client.Client, component *wutongv1alpha1.
 		labels:         LabelsForWutongComponent(component),
 		mysqlUser:      "root",
 		mysqlPassword:  string(uuid.NewUUID())[0:8],
-		databases:      []string{"console"},
+		databases:      []string{regionDBName},
 		storageRequest: getStorageRequest("DB_DATA_STORAGE_REQUEST", 21),
 	}
-	regionDBName := os.Getenv("REGION_DB_NAME")
-	if regionDBName == "" {
-		regionDBName = "region"
-	}
-	d.databases = append(d.databases, regionDBName)
+
 	return d
 }
 
@@ -347,7 +347,7 @@ func (d *db) initdbCMForDB() client.Object {
 		},
 		Data: map[string]string{
 			"initdb.sql": `
-CREATE DATABASE IF NOT EXISTS console;
+CREATE DATABASE IF NOT EXISTS region;
 `,
 		},
 	}
