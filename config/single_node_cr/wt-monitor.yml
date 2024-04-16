@@ -9,6 +9,6 @@ metadata:
     name: wt-monitor
 spec:
   replicas: 1
-  image: swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-monitor:v1.11.0
+  image: swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-monitor:v1.12.0
   imagePullPolicy: IfNotPresent
   priorityComponent: false
