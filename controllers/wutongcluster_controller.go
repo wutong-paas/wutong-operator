@@ -507,7 +507,7 @@ func (r *WutongClusterReconciler) genComponentClaims(cluster *wutongv1alpha1.Wut
 	if cluster.Spec.ImageHub == nil || cluster.Spec.ImageHub.Domain == constants.DefImageRepository {
 		claim := newClaim("wt-hub")
 		claim.imageName = "registry"
-		claim.version = "2.6.2"
+		claim.version = "2.8.3"
 		claim.isInit = isInit
 		name2Claim["wt-hub"] = claim
 	}

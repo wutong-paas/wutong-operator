@@ -168,6 +168,10 @@ func (w *worker) deployment() client.Object {
 	}
 	if imageHub := w.cluster.Spec.ImageHub; imageHub != nil {
 		env = append(env, corev1.EnvVar{
+			Name:  "CI_VERSION",
+			Value: w.cluster.Spec.InstallVersion,
+		})
+		env = append(env, corev1.EnvVar{
 			Name:  "BUILD_IMAGE_REPOSTORY_DOMAIN",
 			Value: path.Join(imageHub.Domain, imageHub.Namespace),
 		})

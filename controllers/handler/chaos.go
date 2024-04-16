@@ -210,6 +210,10 @@ func (c *chaos) deployment() client.Object {
 
 	env := []corev1.EnvVar{
 		{
+			Name:  "CI_VERSION",
+			Value: c.cluster.Spec.InstallVersion,
+		},
+		{
 			Name: "POD_IP",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
