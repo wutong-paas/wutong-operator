@@ -168,6 +168,9 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	for _, con := range wutongcluster.Status.Conditions {
+		if wutongv1alpha1.InstallMode(con.Type) == wutongv1alpha1.WutongClusterConditionTypeImageRepository && wutongcluster.Spec.InstallMode == wutongv1alpha1.InstallationModeOffline {
+			continue
+		}
 		if con.Status != corev1.ConditionTrue {
 			return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 		}
