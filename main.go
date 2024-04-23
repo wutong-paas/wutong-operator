@@ -92,15 +92,15 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "WutongCluster")
 		os.Exit(1)
 	}
-	if err = (&controllers.WutongPackageReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("WutongPackage"),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("WutongPackage"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "WutongPackage")
-		os.Exit(1)
-	}
+	// if err = (&controllers.WutongPackageReconciler{
+	// 	Client:   mgr.GetClient(),
+	// 	Log:      ctrl.Log.WithName("controllers").WithName("WutongPackage"),
+	// 	Scheme:   mgr.GetScheme(),
+	// 	Recorder: mgr.GetEventRecorderFor("WutongPackage"),
+	// }).SetupWithManager(mgr); err != nil {
+	// 	setupLog.Error(err, "unable to create controller", "controller", "WutongPackage")
+	// 	os.Exit(1)
+	// }
 	if err = (&controllers.WutongVolumeReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("WutongVolume"),

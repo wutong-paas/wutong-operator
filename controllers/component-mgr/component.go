@@ -2,7 +2,6 @@ package componentmgr
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -83,42 +82,42 @@ func (r *WutongComponentMgr) SetConfigCompletedCondition() {
 }
 
 // SetPackageReadyCondition -
-func (r *WutongComponentMgr) SetPackageReadyCondition(pkg *wutongv1alpha1.WutongPackage) {
-	if pkg == nil {
-		condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionTrue, "PackageReady", "")
-		_ = r.cpt.Status.UpdateCondition(condition)
-		return
-	}
-	_, pkgcondition := pkg.Status.GetCondition(wutongv1alpha1.Ready)
-	if pkgcondition == nil {
-		condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionFalse, "PackageNotReady", "")
-		_ = r.cpt.Status.UpdateCondition(condition)
-		return
-	}
-	if pkgcondition.Status != wutongv1alpha1.Completed {
-		condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionFalse, "PackageNotReady", pkgcondition.Message)
-		_ = r.cpt.Status.UpdateCondition(condition)
-		return
-	}
-	condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionTrue, "PackageReady", "")
-	_ = r.cpt.Status.UpdateCondition(condition)
-}
+// func (r *WutongComponentMgr) SetPackageReadyCondition(pkg *wutongv1alpha1.WutongPackage) {
+// 	if pkg == nil {
+// 		condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionTrue, "PackageReady", "")
+// 		_ = r.cpt.Status.UpdateCondition(condition)
+// 		return
+// 	}
+// 	_, pkgcondition := pkg.Status.GetCondition(wutongv1alpha1.Ready)
+// 	if pkgcondition == nil {
+// 		condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionFalse, "PackageNotReady", "")
+// 		_ = r.cpt.Status.UpdateCondition(condition)
+// 		return
+// 	}
+// 	if pkgcondition.Status != wutongv1alpha1.Completed {
+// 		condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionFalse, "PackageNotReady", pkgcondition.Message)
+// 		_ = r.cpt.Status.UpdateCondition(condition)
+// 		return
+// 	}
+// 	condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionTrue, "PackageReady", "")
+// 	_ = r.cpt.Status.UpdateCondition(condition)
+// }
 
 // CheckPrerequisites -
-func (r *WutongComponentMgr) CheckPrerequisites(cluster *wutongv1alpha1.WutongCluster, pkg *wutongv1alpha1.WutongPackage) bool {
-	if r.cpt.Spec.PriorityComponent {
-		// If ImageHub is empty, the priority component no need to wait until WutongPackage is completed.
-		return true
-	}
-	// Otherwise, we have to make sure WutongPackage is completed before we create the resource.
-	if cluster.Spec.InstallMode != wutongv1alpha1.InstallationModeFullOnline {
-		if err := checkPackageStatus(pkg); err != nil {
-			r.log.V(6).Info(err.Error())
-			return false
-		}
-	}
-	return true
-}
+// func (r *WutongComponentMgr) CheckPrerequisites(cluster *wutongv1alpha1.WutongCluster, wutongpackage *wutongv1alpha1.WutongPackage) bool {
+// 	if r.cpt.Spec.PriorityComponent {
+// 		// If ImageHub is empty, the priority component no need to wait until WutongPackage is completed.
+// 		return true
+// 	}
+// 	// Otherwise, we have to make sure WutongPackage is completed before we create the resource.
+// 	if cluster.Spec.InstallMode != wutongv1alpha1.InstallationModeFullOnline {
+// 		if err := checkPackageStatus(wutongpackage); err != nil {
+// 			r.log.V(6).Info(err.Error())
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }
 
 // GenerateStatus -
 func (r *WutongComponentMgr) GenerateStatus(pods []corev1.Pod) {
@@ -201,7 +200,7 @@ func (r *WutongComponentMgr) UpdateOrCreateResource(obj client.Object) (reconcil
 		r.log.Info(fmt.Sprintf("Creating a new %s", obj.GetObjectKind().GroupVersionKind().Kind), "Namespace", obj.GetNamespace(), "Name", obj.GetName())
 		err = r.client.Create(ctx, obj)
 		if err != nil {
-			r.log.Error(err, "Failed to create new", obj.GetObjectKind(), "Namespace", obj.GetNamespace(), "Name", obj.GetName())
+			r.log.Error(err, fmt.Sprintf("Failed to create new %s", obj.GetObjectKind()), "Namespace", obj.GetNamespace(), "Name", obj.GetName())
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{Requeue: true}, nil
@@ -285,16 +284,16 @@ func (r *WutongComponentMgr) deleteResourcesIfExists(obj client.Object) error {
 	return nil
 }
 
-func checkPackageStatus(pkg *wutongv1alpha1.WutongPackage) error {
-	var packageCompleted bool
-	for _, cond := range pkg.Status.Conditions {
-		if cond.Type == wutongv1alpha1.Ready && cond.Status == wutongv1alpha1.Completed {
-			packageCompleted = true
-			break
-		}
-	}
-	if !packageCompleted {
-		return errors.New("wutong package is not completed in InstallationModeWithoutPackage mode")
-	}
-	return nil
-}
+// func checkPackageStatus(pkg *wutongv1alpha1.WutongPackage) error {
+// 	var packageCompleted bool
+// 	for _, cond := range pkg.Status.Conditions {
+// 		if cond.Type == wutongv1alpha1.Ready && cond.Status == wutongv1alpha1.Completed {
+// 			packageCompleted = true
+// 			break
+// 		}
+// 	}
+// 	if !packageCompleted {
+// 		return errors.New("wutong package is not completed in InstallationModeWithoutPackage mode")
+// 	}
+// 	return nil
+// }
