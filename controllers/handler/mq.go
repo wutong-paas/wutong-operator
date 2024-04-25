@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -51,6 +52,7 @@ func (m *mq) Before() error {
 func (m *mq) Resources() []client.Object {
 	return []client.Object{
 		m.deployment(),
+		m.service(),
 	}
 }
 
@@ -129,4 +131,24 @@ func (m *mq) deployment() client.Object {
 	}
 
 	return ds
+}
+
+func (m *mq) service() client.Object {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      MQName,
+			Namespace: m.component.Namespace,
+			Labels:    m.labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       MQName,
+					Port:       6300,
+					TargetPort: intstr.FromInt(6300),
+				},
+			},
+			Selector: m.labels,
+		},
+	}
 }

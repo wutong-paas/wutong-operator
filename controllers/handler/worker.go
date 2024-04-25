@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -81,6 +82,7 @@ func (w *worker) Before() error {
 func (w *worker) Resources() []client.Object {
 	return []client.Object{
 		w.deployment(),
+		w.service(),
 	}
 }
 
@@ -236,4 +238,24 @@ func (w *worker) deployment() client.Object {
 	}
 
 	return ds
+}
+
+func (w *worker) service() client.Object {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      WorkerName,
+			Namespace: w.component.Namespace,
+			Labels:    w.labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       WorkerName,
+					Port:       6535,
+					TargetPort: intstr.FromInt(6535),
+				},
+			},
+			Selector: w.labels,
+		},
+	}
 }

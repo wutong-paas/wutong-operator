@@ -142,6 +142,10 @@ func (e *eventlog) service() client.Object {
 				},
 				{
 					Name: "monitorlog",
+					Port: 6366,
+				},
+				{
+					Name: "monitorlog-udp",
 					Port: 6166,
 				},
 			},
