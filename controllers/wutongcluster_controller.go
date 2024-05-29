@@ -389,7 +389,7 @@ func (r *WutongClusterReconciler) createComponents(cluster *wutongv1alpha1.Wuton
 }
 
 func (r *WutongClusterReconciler) updateComponents(ctx context.Context, cluster *wutongv1alpha1.WutongCluster) error {
-	var ignoreComponents = map[string]struct{}{"metrics-server": {}, "wt-etcd": {}, "wt-db": {}}
+	var ignoreComponents = map[string]struct{}{"metrics-server": {}, "wt-etcd": {}, "wt-db": {}, "wt-hub": {}}
 	comps := &wutongv1alpha1.WutongComponentList{}
 	err := r.Client.List(ctx, comps, &client.ListOptions{})
 	if err != nil {
