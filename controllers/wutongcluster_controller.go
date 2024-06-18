@@ -168,6 +168,9 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	for _, con := range wutongcluster.Status.Conditions {
+		if wutongv1alpha1.InstallMode(con.Type) == wutongv1alpha1.WutongClusterConditionTypeImageRepository && wutongcluster.Spec.InstallMode == wutongv1alpha1.InstallationModeOffline {
+			continue
+		}
 		if con.Status != corev1.ConditionTrue {
 			return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 		}
@@ -182,9 +185,10 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	if err := r.createWutongVolumes(wutongcluster); err != nil {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, fmt.Errorf("create wutong volume failure %s", err.Error())
 	}
-	if err := r.createWutongPackage(); err != nil {
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, fmt.Errorf("create wutong package failure %s", err.Error())
-	}
+	// Deprecated: No need to create wutong package
+	// if err := r.createWutongPackage(); err != nil {
+	// 	return ctrl.Result{RequeueAfter: 5 * time.Second}, fmt.Errorf("create wutong package failure %s", err.Error())
+	// }
 	if err := r.createComponents(wutongcluster); err != nil {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, fmt.Errorf("create components failure %s", err.Error())
 	}
@@ -385,7 +389,7 @@ func (r *WutongClusterReconciler) createComponents(cluster *wutongv1alpha1.Wuton
 }
 
 func (r *WutongClusterReconciler) updateComponents(ctx context.Context, cluster *wutongv1alpha1.WutongCluster) error {
-	var ignoreComponents = map[string]struct{}{"metrics-server": {}, "wt-etcd": {}, "wt-db": {}}
+	var ignoreComponents = map[string]struct{}{"metrics-server": {}, "wt-etcd": {}, "wt-db": {}, "wt-hub": {}}
 	comps := &wutongv1alpha1.WutongComponentList{}
 	err := r.Client.List(ctx, comps, &client.ListOptions{})
 	if err != nil {
@@ -583,18 +587,18 @@ func (r *WutongClusterReconciler) genComponentClaims(cluster *wutongv1alpha1.Wut
 	return name2Claim
 }
 
-func (r *WutongClusterReconciler) createWutongPackage() error {
-	pkg := &wutongv1alpha1.WutongPackage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.WutongPackageName,
-			Namespace: constants.WutongSystemNamespace,
-		},
-		Spec: wutongv1alpha1.WutongPackageSpec{
-			PkgPath: "/opt/wutong/pkg/tgz/wutong.tgz",
-		},
-	}
-	return r.createResourceIfNotExists(pkg)
-}
+// func (r *WutongClusterReconciler) createWutongPackage() error {
+// 	pkg := &wutongv1alpha1.WutongPackage{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name:      constants.WutongPackageName,
+// 			Namespace: constants.WutongSystemNamespace,
+// 		},
+// 		Spec: wutongv1alpha1.WutongPackageSpec{
+// 			PkgPath: "/opt/wutong/pkg/tgz/wutong.tgz",
+// 		},
+// 	}
+// 	return r.createResourceIfNotExists(pkg)
+// }
 
 func (r *WutongClusterReconciler) createWutongVolumes(cluster *wutongv1alpha1.WutongCluster) error {
 	if cluster.Spec.WutongVolumeSpecRWX != nil {

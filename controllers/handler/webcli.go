@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -53,6 +54,7 @@ func (w *webcli) Before() error {
 func (w *webcli) Resources() []client.Object {
 	return []client.Object{
 		w.deployment(),
+		w.service(),
 	}
 }
 
@@ -130,4 +132,24 @@ func (w *webcli) deployment() client.Object {
 	}
 
 	return ds
+}
+
+func (w *webcli) service() client.Object {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      WebCliName,
+			Namespace: w.component.Namespace,
+			Labels:    w.labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       WebCliName,
+					Port:       7171,
+					TargetPort: intstr.FromInt(7171),
+				},
+			},
+			Selector: w.labels,
+		},
+	}
 }

@@ -97,6 +97,7 @@ func ConfigureAuthentication(authConfig *types.AuthConfig, username, password st
 }
 
 // LoginRepository logs in to a image repository
+// 离线环境下，wutong.me 作为 serverAddress，此函数调用不通过，会导致创建 wutongcomponent 组件失败
 func LoginRepository(serverAddress, username, password string) error {
 	ctx := context.Background()
 	isDefaultRegistry := serverAddress == "wutong.me"

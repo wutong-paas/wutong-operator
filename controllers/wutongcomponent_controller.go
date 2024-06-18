@@ -120,32 +120,32 @@ func (r *WutongComponentReconciler) Reconcile(ctx context.Context, request ctrl.
 	}
 	mgr.SetConfigCompletedCondition()
 
-	var pkg *wutongv1alpha1.WutongPackage
-	if cluster.Spec.InstallMode != wutongv1alpha1.InstallationModeFullOnline {
-		pkg = &wutongv1alpha1.WutongPackage{}
-		if err := r.Client.Get(cancleCtx, types.NamespacedName{Namespace: cpt.Namespace, Name: constants.WutongPackageName}, pkg); err != nil {
-			condition := packageCondition(err)
-			changed := cpt.Status.UpdateCondition(condition)
-			if changed {
-				r.Recorder.Event(cpt, corev1.EventTypeWarning, condition.Reason, condition.Message)
-				return reconcile.Result{RequeueAfter: 3 * time.Second}, mgr.UpdateStatus()
-			}
+	// var wutongpackage *wutongv1alpha1.WutongPackage
+	// if cluster.Spec.InstallMode != wutongv1alpha1.InstallationModeFullOnline {
+	// 	wutongpackage = &wutongv1alpha1.WutongPackage{}
+	// 	if err := r.Client.Get(cancleCtx, types.NamespacedName{Namespace: cpt.Namespace, Name: constants.WutongPackageName}, wutongpackage); err != nil {
+	// 		condition := packageCondition(err)
+	// 		changed := cpt.Status.UpdateCondition(condition)
+	// 		if changed {
+	// 			r.Recorder.Event(cpt, corev1.EventTypeWarning, condition.Reason, condition.Message)
+	// 			return reconcile.Result{RequeueAfter: 3 * time.Second}, mgr.UpdateStatus()
+	// 		}
 
-			return reconcile.Result{RequeueAfter: 3 * time.Second}, nil
-		}
-	}
-	mgr.SetPackageReadyCondition(pkg)
+	// 		return reconcile.Result{RequeueAfter: 3 * time.Second}, nil
+	// 	}
+	// }
+	// mgr.SetPackageReadyCondition(wutongpackage)
 
-	if !mgr.CheckPrerequisites(cluster, pkg) {
-		condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongComponentReady, corev1.ConditionFalse,
-			"PrerequisitesFailed", "failed to check prerequisites")
-		changed := cpt.Status.UpdateCondition(condition)
-		if changed {
-			r.Recorder.Event(cpt, corev1.EventTypeWarning, condition.Reason, condition.Message)
-			return reconcile.Result{RequeueAfter: 3 * time.Second}, mgr.UpdateStatus()
-		}
-		return reconcile.Result{RequeueAfter: 3 * time.Second}, nil
-	}
+	// if !mgr.CheckPrerequisites(cluster, wutongpackage) {
+	// 	condition := wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongComponentReady, corev1.ConditionFalse,
+	// 		"PrerequisitesFailed", "failed to check prerequisites")
+	// 	changed := cpt.Status.UpdateCondition(condition)
+	// 	if changed {
+	// 		r.Recorder.Event(cpt, corev1.EventTypeWarning, condition.Reason, condition.Message)
+	// 		return reconcile.Result{RequeueAfter: 3 * time.Second}, mgr.UpdateStatus()
+	// 	}
+	// 	return reconcile.Result{RequeueAfter: 3 * time.Second}, nil
+	// }
 
 	hdl := fn(cancleCtx, r.Client, cpt, cluster)
 	if err := hdl.Before(); err != nil {
@@ -324,12 +324,12 @@ func clusterCondition(err error) *wutongv1alpha1.WutongComponentCondition {
 	return wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.ClusterConfigCompeleted, corev1.ConditionFalse, reason, msg)
 }
 
-func packageCondition(err error) *wutongv1alpha1.WutongComponentCondition {
-	reason := "PackageNotFound"
-	msg := "wutongpackage not found"
-	if !k8sErrors.IsNotFound(err) {
-		reason = "UnknownErr"
-		msg = fmt.Sprintf("failed to get wutongpackage: %v", err)
-	}
-	return wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionFalse, reason, msg)
-}
+// func packageCondition(err error) *wutongv1alpha1.WutongComponentCondition {
+// 	reason := "PackageNotFound"
+// 	msg := "wutongpackage not found"
+// 	if !k8sErrors.IsNotFound(err) {
+// 		reason = "UnknownErr"
+// 		msg = fmt.Sprintf("failed to get wutongpackage: %v", err)
+// 	}
+// 	return wutongv1alpha1.NewWutongComponentCondition(wutongv1alpha1.WutongPackageReady, corev1.ConditionFalse, reason, msg)
+// }
