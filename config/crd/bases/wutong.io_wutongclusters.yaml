@@ -93,6 +93,10 @@ spec:
                 description: Light weight is a mode that only install the necessary
                   components of wutong
                 type: boolean
+              edgeIsolatedClusterCode:
+                description: EdgeIsolatedClusterCode is the code of the edge isolated
+                  cluster
+                type: string
               nodesForChaos:
                 description: Specify the nodes where the wt-gateway will running.
                 items:

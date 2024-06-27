@@ -584,6 +584,26 @@ func (r *WutongClusterReconciler) genComponentClaims(cluster *wutongv1alpha1.Wut
 		}
 	}
 
+	if cluster.Spec.EdgeIsolatedClusterCode != "" {
+		claim := newClaim("wt-api-telepresence-interceptor")
+		claim.version = "latest"
+		claim.replicas = commonutil.Int32(1)
+		claim.envs = map[string]string{
+			"EDGE_ISOLATED_CLUSTER_CODE": cluster.Spec.EdgeIsolatedClusterCode,
+		}
+		claim.limitCPU = "500m"
+		claim.limitMemory = "128Mi"
+		name2Claim["wt-api-telepresence-interceptor"] = claim
+	} else {
+		// try delete wt-api-telepresence-interceptor component
+		r.Client.Delete(context.Background(), &wutongv1alpha1.WutongComponent{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "wt-api-telepresence-interceptor",
+				Namespace: constants.WutongSystemNamespace,
+			},
+		}, &client.DeleteOptions{})
+	}
+
 	return name2Claim
 }
 
