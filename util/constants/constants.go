@@ -68,6 +68,7 @@ const (
 	// WutongClusterSettingsConfigMapName is the name of wutong cluster settings configmap
 	WutongClusterSettingsConfigMapName      = "wutong-cluster-settings"
 	WutongClusterCurrentInstalledVersionKey = "CurrentWutongClusterInstalledVersion"
+	WutongClusterEdgeIsolatedClusterCodeKey = "EdgeIsolatedClusterCode"
 
 	// InstallImageRepo install image repo
 	InstallImageRepo = "swr.cn-southwest-2.myhuaweicloud.com/wutong"

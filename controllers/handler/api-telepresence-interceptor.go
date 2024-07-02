@@ -58,7 +58,7 @@ func (a *apiTelepresenceInterceptor) deployment() client.Object {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "wt-management-cluster-kubeconfig",
-			MountPath: "/telepresence/kubeconfig",
+			MountPath: "/root/.kube/config",
 			SubPath:   "kubeconfig",
 		},
 	}
@@ -120,6 +120,26 @@ func (a *apiTelepresenceInterceptor) deployment() client.Object {
 									},
 								},
 							},
+							// StartupProbe: &corev1.Probe{
+							// 	InitialDelaySeconds: 10,
+							// 	PeriodSeconds:       10,
+							// 	FailureThreshold:    30,
+							// 	Handler: corev1.Handler{
+							// 		TCPSocket: &corev1.TCPSocketAction{
+							// 			Port: intstr.FromInt(8888),
+							// 		},
+							// 	},
+							// },
+							// LivenessProbe: &corev1.Probe{
+							// 	InitialDelaySeconds: 10,
+							// 	PeriodSeconds:       10,
+							// 	FailureThreshold:    3,
+							// 	Handler: corev1.Handler{
+							// 		TCPSocket: &corev1.TCPSocketAction{
+							// 			Port: intstr.FromInt(8888),
+							// 		},
+							// 	},
+							// },
 						},
 					},
 					PriorityClassName: constants.WutongPlatformComponentPriorityClassName,
