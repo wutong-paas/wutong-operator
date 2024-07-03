@@ -824,36 +824,39 @@ func applyWutongManagementWtAPIProxy(ctx context.Context, client kubernetes.Inte
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Name: wtAPIProxy,
-									// Image:           "swr.cn-southwest-2.myhuaweicloud.com/wutong/infinity",
-									Image:           "swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-api-agent-reverse-proxy",
-									ImagePullPolicy: corev1.PullIfNotPresent,
+									Name:  wtAPIProxy,
+									Image: "swr.cn-southwest-2.myhuaweicloud.com/wutong/infinity",
+									// Image:           "swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-api-agent-reverse-proxy",
+									// ImagePullPolicy: corev1.PullIfNotPresent,
+									ImagePullPolicy: corev1.PullAlways,
 									Env: []corev1.EnvVar{
 										{
 											Name:  "EDGE_ISOLATED_CLUSTER_CODE",
 											Value: newCode,
 										},
 									},
-									StartupProbe: &corev1.Probe{
-										InitialDelaySeconds: 10,
-										PeriodSeconds:       10,
-										FailureThreshold:    30,
-										Handler: corev1.Handler{
-											TCPSocket: &corev1.TCPSocketAction{
-												Port: intstr.FromInt(8888),
-											},
-										},
-									},
-									LivenessProbe: &corev1.Probe{
-										InitialDelaySeconds: 10,
-										PeriodSeconds:       10,
-										FailureThreshold:    3,
-										Handler: corev1.Handler{
-											TCPSocket: &corev1.TCPSocketAction{
-												Port: intstr.FromInt(8888),
-											},
-										},
-									},
+									// StartupProbe: &corev1.Probe{
+									// 	InitialDelaySeconds: 10,
+									// 	PeriodSeconds:       10,
+									// 	FailureThreshold:    30,
+									// 	Handler: corev1.Handler{
+									// 		TCPSocket: &corev1.TCPSocketAction{
+									// 			Host: newCode + "-wt-api-agent.wt-system",
+									// 			Port: intstr.FromInt(8888),
+									// 		},
+									// 	},
+									// },
+									// LivenessProbe: &corev1.Probe{
+									// 	InitialDelaySeconds: 10,
+									// 	PeriodSeconds:       10,
+									// 	FailureThreshold:    3,
+									// 	Handler: corev1.Handler{
+									// 		TCPSocket: &corev1.TCPSocketAction{
+									// 			Host: newCode + "-wt-api-agent.wt-system",
+									// 			Port: intstr.FromInt(8888),
+									// 		},
+									// 	},
+									// },
 								},
 							},
 						},

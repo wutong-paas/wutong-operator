@@ -99,9 +99,10 @@ func (a *apiTelepresenceInterceptor) deployment() client.Object {
 					TerminationGracePeriodSeconds: commonutil.Int64(120),
 					Containers: []corev1.Container{
 						{
-							Name:            APITelepresenceInterceptorName,
-							Image:           a.component.Spec.Image,
-							ImagePullPolicy: a.component.ImagePullPolicy(),
+							Name:  APITelepresenceInterceptorName,
+							Image: a.component.Spec.Image,
+							// ImagePullPolicy: a.component.ImagePullPolicy(),
+							ImagePullPolicy: corev1.PullAlways,
 							Env:             a.component.Spec.Env,
 							Args:            a.component.Spec.Args,
 							VolumeMounts:    volumeMounts,
@@ -120,26 +121,26 @@ func (a *apiTelepresenceInterceptor) deployment() client.Object {
 									},
 								},
 							},
-							// StartupProbe: &corev1.Probe{
-							// 	InitialDelaySeconds: 10,
-							// 	PeriodSeconds:       10,
-							// 	FailureThreshold:    30,
-							// 	Handler: corev1.Handler{
-							// 		TCPSocket: &corev1.TCPSocketAction{
-							// 			Port: intstr.FromInt(8888),
-							// 		},
-							// 	},
-							// },
-							// LivenessProbe: &corev1.Probe{
-							// 	InitialDelaySeconds: 10,
-							// 	PeriodSeconds:       10,
-							// 	FailureThreshold:    3,
-							// 	Handler: corev1.Handler{
-							// 		TCPSocket: &corev1.TCPSocketAction{
-							// 			Port: intstr.FromInt(8888),
-							// 		},
-							// 	},
-							// },
+							StartupProbe: &corev1.Probe{
+								InitialDelaySeconds: 10,
+								PeriodSeconds:       10,
+								FailureThreshold:    10,
+								Handler: corev1.Handler{
+									Exec: &corev1.ExecAction{
+										Command: []string{"./health-check.sh"},
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								InitialDelaySeconds: 10,
+								PeriodSeconds:       10,
+								FailureThreshold:    3,
+								Handler: corev1.Handler{
+									Exec: &corev1.ExecAction{
+										Command: []string{"./health-check.sh"},
+									},
+								},
+							},
 						},
 					},
 					PriorityClassName: constants.WutongPlatformComponentPriorityClassName,
