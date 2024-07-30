@@ -18,14 +18,18 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/go-logr/logr"
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
 	clustermgr "github.com/wutong-paas/wutong-operator/controllers/cluster-mgr"
 	"github.com/wutong-paas/wutong-operator/util/constants"
 	"github.com/wutong-paas/wutong-operator/util/uuidutil"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -168,7 +172,7 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	for _, con := range wutongcluster.Status.Conditions {
-		if wutongv1alpha1.InstallMode(con.Type) == wutongv1alpha1.WutongClusterConditionTypeImageRepository && wutongcluster.Spec.InstallMode == wutongv1alpha1.InstallationModeOffline {
+		if (con.Type == wutongv1alpha1.WutongClusterConditionTypeImageRepository || con.Type == wutongv1alpha1.WutongClusterConditionTypeDNS) && wutongcluster.Spec.InstallMode == wutongv1alpha1.InstallationModeOffline {
 			continue
 		}
 		if con.Status != corev1.ConditionTrue {
@@ -193,6 +197,17 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, fmt.Errorf("create components failure %s", err.Error())
 	}
 
+	wtManagementClusterKubeconfigSecret := &corev1.Secret{}
+	err = r.Get(ctx, types.NamespacedName{
+		Name:      "wt-management-cluster-kubeconfig",
+		Namespace: constants.WutongSystemNamespace,
+	}, wtManagementClusterKubeconfigSecret)
+	if err != nil && errors.IsNotFound(err) {
+		if wutongcluster.Spec.EdgeIsolatedClusterCode != "" {
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, fmt.Errorf("wait for wt-management-cluster-kubeconfig secret on edge isolated cluster")
+		}
+	}
+
 	wutongclustersetting := &corev1.ConfigMap{}
 	var settingsNamespacedName = types.NamespacedName{Name: constants.WutongClusterSettingsConfigMapName, Namespace: wutongcluster.Namespace}
 	err = r.Client.Get(ctx, settingsNamespacedName, wutongclustersetting)
@@ -206,6 +221,9 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 				Data: map[string]string{
 					constants.WutongClusterCurrentInstalledVersionKey: wutongcluster.Spec.InstallVersion,
 				},
+			}
+			if wutongcluster.Spec.EdgeIsolatedClusterCode != "" {
+				wutongclustersetting.Data[constants.WutongClusterEdgeIsolatedClusterCodeKey] = wutongcluster.Spec.EdgeIsolatedClusterCode
 			}
 			err = r.Client.Create(ctx, wutongclustersetting)
 			if err != nil {
@@ -226,6 +244,96 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		}
 		// update wutongclustersetting
 		wutongclustersetting.Data[constants.WutongClusterCurrentInstalledVersionKey] = wutongcluster.Spec.InstallVersion
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			settings := &corev1.ConfigMap{}
+			if err := r.Client.Get(ctx, settingsNamespacedName, settings); err != nil {
+				return err
+			}
+			settings.Data = wutongclustersetting.Data
+			return r.Client.Update(ctx, settings)
+		}); err != nil {
+			reqLogger.Error(err, "update wutongcluster settings configmap")
+			return reconcile.Result{RequeueAfter: time.Second * 2}, err
+		}
+	}
+
+	if wutongclustersetting.Data[constants.WutongClusterEdgeIsolatedClusterCodeKey] != wutongcluster.Spec.EdgeIsolatedClusterCode {
+		newCode := wutongcluster.Spec.EdgeIsolatedClusterCode
+		oldCode := wutongclustersetting.Data[constants.WutongClusterEdgeIsolatedClusterCodeKey]
+
+		var wtManagementClusterKubeClient kubernetes.Interface
+		if kubeconfig, ok := wtManagementClusterKubeconfigSecret.Data["kubeconfig"]; ok && len(kubeconfig) > 0 {
+			restconfig, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("build wt management cluster rest config from secret failed: %s", err.Error())
+			}
+			wtManagementClusterKubeClient, err = kubernetes.NewForConfig(restconfig)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("build wt management cluster kube client from secret failed: %s", err.Error())
+			}
+
+			if err = applyWutongManagementWtAPIProxy(ctx, wtManagementClusterKubeClient, newCode, oldCode); err != nil {
+				reqLogger.Error(err, "apply wutong management wt-api proxy")
+				return ctrl.Result{}, fmt.Errorf("apply wutong management wt-api proxy failed: %s", err.Error())
+			}
+		}
+
+		reqLogger.V(6).Info("update wutong cluster edge isolated cluster code to " + newCode)
+		// delete old wutongcomponent
+		if err = r.Delete(ctx, &wutongv1alpha1.WutongComponent{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "wt-api-telepresence-interceptor",
+				Namespace: constants.WutongSystemNamespace,
+			},
+		}); err != nil && !errors.IsNotFound(err) {
+			reqLogger.Error(err, "delete old wutongcomponent wt-api-telepresence-interceptor")
+			return reconcile.Result{RequeueAfter: time.Second * 2}, err
+		}
+
+		if newCode != "" {
+			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				regionConfig := &corev1.ConfigMap{}
+				if err := r.Client.Get(ctx, types.NamespacedName{Name: "region-config", Namespace: wutongcluster.Namespace}, regionConfig); err != nil {
+					return err
+				}
+				regionConfig.Data["edgeIsolatedApiAddress"] = fmt.Sprintf("http://%s-wt-api-agent.wt-system:8888", newCode)
+				return r.Client.Update(ctx, regionConfig)
+			}); err != nil {
+				reqLogger.Error(err, "update wutongcluster settings configmap")
+				return reconcile.Result{RequeueAfter: time.Second * 2}, err
+			}
+		} else {
+			// delete old wutongcomponent
+			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				regionConfig := &corev1.ConfigMap{}
+				if err := r.Client.Get(ctx, types.NamespacedName{Name: "region-config", Namespace: wutongcluster.Namespace}, regionConfig); err != nil {
+					return err
+				}
+				var updated bool
+				if regionConfig.Data["edgeIsolatedApiAddress"] != "" {
+					delete(regionConfig.Data, "edgeIsolatedApiAddress")
+					updated = true
+				}
+				if regionConfig.Data["edgeIsolatedWebsocketAddress"] != "" {
+					delete(regionConfig.Data, "edgeIsolatedWebsocketAddress")
+					updated = true
+				}
+				if updated {
+					return r.Client.Update(ctx, regionConfig)
+				}
+				return nil
+			}); err != nil {
+				reqLogger.Error(err, "update wutongcluster settings configmap")
+				return reconcile.Result{RequeueAfter: time.Second * 2}, err
+			}
+		}
+
+		// update wutongclustersetting
+		if newCode == "" {
+			delete(wutongclustersetting.Data, constants.WutongClusterEdgeIsolatedClusterCodeKey)
+		} else {
+			wutongclustersetting.Data[constants.WutongClusterEdgeIsolatedClusterCodeKey] = newCode
+		}
 		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			settings := &corev1.ConfigMap{}
 			if err := r.Client.Get(ctx, settingsNamespacedName, settings); err != nil {
@@ -584,6 +692,26 @@ func (r *WutongClusterReconciler) genComponentClaims(cluster *wutongv1alpha1.Wut
 		}
 	}
 
+	if cluster.Spec.EdgeIsolatedClusterCode != "" {
+		claim := newClaim("wt-api-telepresence-interceptor")
+		claim.version = "latest"
+		claim.replicas = commonutil.Int32(1)
+		claim.envs = map[string]string{
+			"EDGE_ISOLATED_CLUSTER_CODE": cluster.Spec.EdgeIsolatedClusterCode,
+		}
+		claim.limitCPU = "500m"
+		claim.limitMemory = "128Mi"
+		name2Claim["wt-api-telepresence-interceptor"] = claim
+	} else {
+		// try delete wt-api-telepresence-interceptor component
+		r.Client.Delete(context.Background(), &wutongv1alpha1.WutongComponent{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "wt-api-telepresence-interceptor",
+				Namespace: constants.WutongSystemNamespace,
+			},
+		}, &client.DeleteOptions{})
+	}
+
 	return name2Claim
 }
 
@@ -657,4 +785,112 @@ func (r *WutongClusterReconciler) createPriorityClass() error {
 		Description:   "This priority class is used for wutong platform components",
 	}
 	return r.createResourceIfNotExists(priorityClass)
+}
+
+func applyWutongManagementWtAPIProxy(ctx context.Context, client kubernetes.Interface, newCode, oldCode string) error {
+	if newCode != oldCode {
+		if oldCode != "" {
+			// delete old
+			wtAPIProxy := oldCode + "-wt-api-agent"
+			if err := client.AppsV1().Deployments(constants.WutongSystemNamespace).Delete(ctx, wtAPIProxy, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+				return err
+			}
+			if err := client.CoreV1().Services(constants.WutongSystemNamespace).Delete(ctx, wtAPIProxy, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+				return err
+			}
+		}
+
+		if newCode != "" {
+			// create
+			wtAPIProxy := newCode + "-wt-api-agent"
+			httpDeployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      wtAPIProxy,
+					Namespace: constants.WutongSystemNamespace,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: commonutil.Int32(1),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": wtAPIProxy,
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app": wtAPIProxy,
+							},
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  wtAPIProxy,
+									Image: "swr.cn-southwest-2.myhuaweicloud.com/wutong/infinity",
+									// Image:           "swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-api-agent-reverse-proxy",
+									// ImagePullPolicy: corev1.PullIfNotPresent,
+									ImagePullPolicy: corev1.PullAlways,
+									Env: []corev1.EnvVar{
+										{
+											Name:  "EDGE_ISOLATED_CLUSTER_CODE",
+											Value: newCode,
+										},
+									},
+									// StartupProbe: &corev1.Probe{
+									// 	InitialDelaySeconds: 10,
+									// 	PeriodSeconds:       10,
+									// 	FailureThreshold:    30,
+									// 	Handler: corev1.Handler{
+									// 		TCPSocket: &corev1.TCPSocketAction{
+									// 			Host: newCode + "-wt-api-agent.wt-system",
+									// 			Port: intstr.FromInt(8888),
+									// 		},
+									// 	},
+									// },
+									// LivenessProbe: &corev1.Probe{
+									// 	InitialDelaySeconds: 10,
+									// 	PeriodSeconds:       10,
+									// 	FailureThreshold:    3,
+									// 	Handler: corev1.Handler{
+									// 		TCPSocket: &corev1.TCPSocketAction{
+									// 			Host: newCode + "-wt-api-agent.wt-system",
+									// 			Port: intstr.FromInt(8888),
+									// 		},
+									// 	},
+									// },
+								},
+							},
+						},
+					},
+				},
+			}
+			if _, err := client.AppsV1().Deployments(constants.WutongSystemNamespace).Create(ctx, httpDeployment, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
+				return err
+			}
+
+			httpService := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      wtAPIProxy,
+					Namespace: constants.WutongSystemNamespace,
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{
+						"app": wtAPIProxy,
+					},
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8888,
+							TargetPort: intstr.FromInt(8888),
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+			if _, err := client.CoreV1().Services(constants.WutongSystemNamespace).Create(ctx, httpService, metav1.CreateOptions{}); err != nil && !errors.IsAlreadyExists(err) {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

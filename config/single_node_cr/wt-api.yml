@@ -10,6 +10,6 @@ metadata:
     persistentVolumeClaimAccessModes: ReadWriteOnce
 spec:
   replicas: 1
-  image: swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-api:v1.13.0
+  image: swr.cn-southwest-2.myhuaweicloud.com/wutong/wt-api:v1.14.0
   imagePullPolicy: IfNotPresent
   priorityComponent: false

@@ -149,6 +149,8 @@ type WutongClusterSpec struct {
 	Lightweight bool `json:"lightweight,omitempty"`
 	// Optional components
 	OptionalComponent OptionalComponent `json:"optionalComponent,omitempty"`
+	// Edge isolated cluster code
+	EdgeIsolatedClusterCode string `json:"edgeIsolatedClusterCode,omitempty"`
 }
 
 // OptionalComponent define the optional components of wutong to install, only worked when Lightweight is true

@@ -28,6 +28,7 @@ func init() {
 	AddHandlerFunc(handler.WebCliName, handler.NewWebCli)
 	AddHandlerFunc(handler.MetricsServerName, handler.NewMetricsServer)
 	AddHandlerFunc(handler.NFSName, handler.NewNFS)
+	AddHandlerFunc(handler.APITelepresenceInterceptorName, handler.NewAPITelepresenceInterceptor)
 	AddHandlerFunc(constants.AliyunCSINasPlugin, handler.NewAliyunCSINasPlugin)
 	AddHandlerFunc(constants.AliyunCSINasProvisioner, handler.NewAliyunCSINasProvisioner)
 	AddHandlerFunc(constants.AliyunCSIDiskPlugin, handler.NewAliyunCSIDiskPlugin)

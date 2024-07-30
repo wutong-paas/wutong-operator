@@ -2,7 +2,7 @@
 
 IMAGE_REGISTRY=${WUTONG_REGISTRY:-'swr.cn-southwest-2.myhuaweicloud.com/wutong'}
 IMAGE_NAME=wutong-operator
-VERSION=v1.13.1
+VERSION=v1.14.0
 
 go mod download
 

@@ -402,7 +402,7 @@ func (a *api) secretAndConfigMapForAPI() []client.Object {
 		},
 	})
 
-	re = append(re, &corev1.ConfigMap{
+	regionConfig := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "region-config",
 			Namespace: a.component.Namespace,
@@ -418,7 +418,14 @@ func (a *api) secretAndConfigMapForAPI() []client.Object {
 			"client.key.pem": clientKey,
 			"ca.pem":         caPem,
 		},
-	})
+	}
+
+	if a.cluster.Spec.EdgeIsolatedClusterCode != "" {
+		regionConfig.Data["edgeIsolatedApiAddress"] = fmt.Sprintf("http://%s-wt-api-agent.wt-system:8888", a.cluster.Spec.EdgeIsolatedClusterCode)
+	}
+
+	re = append(re, regionConfig)
+
 	return re
 }
 
