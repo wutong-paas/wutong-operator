@@ -99,6 +99,11 @@ type EtcdConfig struct {
 
 // WutongClusterSpec defines the desired state of WutongCluster
 type WutongClusterSpec struct {
+	// RegionID is the unique identifier of the region, which
+	// is used to distinguish different regions for wtuong console.
+	RegionID string `json:"regionID"`
+	// RegionCode is the unique code of the region.
+	RegionCode string `json:"regionCode"`
 	// EnableHA is a highly available switch.
 	EnableHA bool `json:"enableHA,omitempty"`
 	// Repository of each Wutong component image, eg. docker.io/wutong.

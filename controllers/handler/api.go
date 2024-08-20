@@ -419,6 +419,13 @@ func (a *api) secretAndConfigMapForAPI() []client.Object {
 			"ca.pem":         caPem,
 		},
 	}
+	// append regionID and regionCode
+	if a.cluster.Spec.RegionID != "" {
+		regionConfig.Data["regionID"] = a.cluster.Spec.RegionID
+	}
+	if a.cluster.Spec.RegionCode != "" {
+		regionConfig.Data["regionCode"] = a.cluster.Spec.RegionCode
+	}
 
 	if a.cluster.Spec.EdgeIsolatedClusterCode != "" {
 		regionConfig.Data["edgeIsolatedApiAddress"] = fmt.Sprintf("http://%s-wt-api-agent.wt-system:8888", a.cluster.Spec.EdgeIsolatedClusterCode)
