@@ -347,6 +347,26 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		}
 	}
 
+	// region-config set regionID and regionCode
+	if wutongcluster.Spec.RegionID != "" || wutongcluster.Spec.RegionCode != "" {
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			regionConfig := &corev1.ConfigMap{}
+			if err := r.Client.Get(ctx, types.NamespacedName{Name: "region-config", Namespace: wutongcluster.Namespace}, regionConfig); err != nil {
+				return err
+			}
+			if wutongcluster.Spec.RegionID != "" {
+				regionConfig.Data["regionID"] = wutongcluster.Spec.RegionID
+			}
+			if wutongcluster.Spec.RegionCode != "" {
+				regionConfig.Data["regionCode"] = wutongcluster.Spec.RegionCode
+			}
+			return r.Client.Update(ctx, regionConfig)
+		}); err != nil {
+			reqLogger.Error(err, "update region-config configmap")
+			return reconcile.Result{RequeueAfter: time.Second * 2}, err
+		}
+	}
+
 	return ctrl.Result{}, nil
 }
 
