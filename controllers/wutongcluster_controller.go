@@ -110,7 +110,7 @@ func (r *WutongClusterReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	// setup imageHub if empty
 	if wutongcluster.Spec.ImageHub == nil {
 		reqLogger.V(6).Info("create new image hub info")
-		imageHub, err := r.getImageHub(wutongcluster)
+		imageHub, err := r.getImageHub()
 		if err != nil {
 			reqLogger.V(6).Info(fmt.Sprintf("set image hub info: %v", err))
 			return reconcile.Result{RequeueAfter: time.Second * 1}, nil
@@ -438,7 +438,7 @@ func (r *WutongClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *WutongClusterReconciler) getImageHub(cluster *wutongv1alpha1.WutongCluster) (*wutongv1alpha1.ImageHub, error) {
+func (r *WutongClusterReconciler) getImageHub() (*wutongv1alpha1.ImageHub, error) {
 	return &wutongv1alpha1.ImageHub{
 		Domain:   constants.DefImageRepository,
 		Username: "admin",

@@ -267,7 +267,7 @@ func (d *db) statefulsetForDB() client.Object {
 							Env:             env,
 							VolumeMounts:    volumeMounts,
 							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									Exec: &corev1.ExecAction{Command: []string{"mysql", "-u" + d.mysqlUser, "-p" + d.mysqlPassword, "-e", "SELECT 1"}},
 								},
 								InitialDelaySeconds: 5,
