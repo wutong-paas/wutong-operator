@@ -123,7 +123,7 @@ func PersistentVolumeClaimForWTData(ns, claimName string, accessModes []corev1.P
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: accessModes,
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: map[corev1.ResourceName]resource.Quantity{
 					corev1.ResourceStorage: *size,
 				},
@@ -262,10 +262,8 @@ func GetContainerRuntime() *containerRuntime {
 			if endpoint == "" {
 				for _, sock := range containerdSocks {
 					if _, err := os.Stat(sock); err == nil {
-						if err == nil {
-							endpoint = sock
-							break
-						}
+						endpoint = sock
+						break
 					}
 				}
 			}

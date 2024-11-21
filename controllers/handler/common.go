@@ -279,7 +279,7 @@ func createPersistentVolumeClaim(ns, claimName string, accessModes []corev1.Pers
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: accessModes,
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: map[corev1.ResourceName]resource.Quantity{
 					corev1.ResourceStorage: *size,
 				},

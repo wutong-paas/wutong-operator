@@ -7,18 +7,19 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/api/types"
+	"github.com/distribution/reference"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 )
 
-//CheckIfImageExists -
-func CheckIfImageExists(pctx context.Context, dockerClient *client.Client, image string) (bool, error) {
-	repo, err := reference.Parse(image)
+// CheckIfImageExists -
+func CheckIfImageExists(pctx context.Context, dockerClient *client.Client, imageName string) (bool, error) {
+	repo, err := reference.Parse(imageName)
 	if err != nil {
-		return false, fmt.Errorf("parse image %s: %v", image, err)
+		return false, fmt.Errorf("parse image %s: %v", imageName, err)
 	}
 	named := repo.(reference.Named)
 	tag := "latest"
@@ -30,7 +31,7 @@ func CheckIfImageExists(pctx context.Context, dockerClient *client.Client, image
 	ctx, cancel := context.WithCancel(pctx)
 	defer cancel()
 
-	imageSummarys, err := dockerClient.ImageList(ctx, types.ImageListOptions{
+	imageSummarys, err := dockerClient.ImageList(ctx, image.ListOptions{
 		Filters: filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: imageFullName}),
 	})
 	if err != nil {
@@ -40,19 +41,19 @@ func CheckIfImageExists(pctx context.Context, dockerClient *client.Client, image
 	return len(imageSummarys) > 0, nil
 }
 
-//ImagePull -
-func ImagePull(ctx context.Context, dockerClient *client.Client, image string) error {
+// ImagePull -
+func ImagePull(ctx context.Context, dockerClient *client.Client, imageName string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	rf, err := reference.ParseAnyReference(image)
+	rf, err := reference.ParseAnyReference(imageName)
 	if err != nil {
 		return err
 	}
 
-	res, err := dockerClient.ImagePull(ctx, rf.String(), types.ImagePullOptions{})
+	res, err := dockerClient.ImagePull(ctx, rf.String(), image.PullOptions{})
 	if err != nil {
-		return fmt.Errorf("pull image %s failure %s", image, err.Error())
+		return fmt.Errorf("pull image %s failure %s", imageName, err.Error())
 	}
 	if res != nil {
 		defer res.Close()
@@ -78,10 +79,10 @@ func ImagePull(ctx context.Context, dockerClient *client.Client, image string) e
 	return nil
 }
 
-//ImagePush -
-func ImagePush(ctx context.Context, dockerClient *client.Client, image, repo, user, pass string) error {
-	var opts types.ImagePushOptions
-	authConfig := types.AuthConfig{
+// ImagePush -
+func ImagePush(ctx context.Context, dockerClient *client.Client, imageName, repo, user, pass string) error {
+	var opts image.PushOptions
+	authConfig := registry.AuthConfig{
 		ServerAddress: repo,
 	}
 	authConfig.Username = user
@@ -93,7 +94,7 @@ func ImagePush(ctx context.Context, dockerClient *client.Client, image, repo, us
 	}
 	opts.RegistryAuth = registryAuth
 	var res io.ReadCloser
-	res, err = dockerClient.ImagePush(ctx, image, opts)
+	res, err = dockerClient.ImagePush(ctx, imageName, opts)
 	if err != nil {
 		return err
 	}
@@ -122,7 +123,7 @@ func ImagePush(ctx context.Context, dockerClient *client.Client, image, repo, us
 	return nil
 }
 
-func encodeAuthToBase64(authConfig types.AuthConfig) (string, error) {
+func encodeAuthToBase64(authConfig registry.AuthConfig) (string, error) {
 	buf, err := json.Marshal(authConfig)
 	if err != nil {
 		return "", err

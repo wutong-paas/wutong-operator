@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/docker/distribution/reference"
+	"github.com/distribution/reference"
 	"github.com/go-logr/logr"
 
 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"

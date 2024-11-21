@@ -115,7 +115,7 @@ func (a *apiTelepresenceInterceptor) deployment() client.Object {
 								},
 							},
 							Lifecycle: &corev1.Lifecycle{
-								PreStop: &corev1.Handler{
+								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{"./leave-and-quit.sh"},
 									},
@@ -125,7 +125,7 @@ func (a *apiTelepresenceInterceptor) deployment() client.Object {
 								InitialDelaySeconds: 10,
 								PeriodSeconds:       10,
 								FailureThreshold:    10,
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{"./health-check.sh"},
 									},
@@ -135,7 +135,7 @@ func (a *apiTelepresenceInterceptor) deployment() client.Object {
 								InitialDelaySeconds: 10,
 								PeriodSeconds:       10,
 								FailureThreshold:    3,
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{"./health-check.sh"},
 									},

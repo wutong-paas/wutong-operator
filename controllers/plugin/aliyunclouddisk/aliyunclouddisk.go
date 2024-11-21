@@ -129,7 +129,7 @@ func (p *aliyunclouddiskPlugin) daemonset() *appsv1.DaemonSet {
 							Image:           path.Join(p.volume.Spec.ImageRepository, "csi-node-driver-registrar:v1.0.1"),
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Lifecycle: &corev1.Lifecycle{
-								PreStop: &corev1.Handler{
+								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{
 											"/bin/sh",

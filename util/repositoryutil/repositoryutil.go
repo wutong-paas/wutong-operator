@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	dockercliconfigtypes "github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/api/types"
 	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/registry"
 	"github.com/pkg/errors"
@@ -16,7 +15,7 @@ import (
 )
 
 // Code from https://github.com/containerd/nerdctl/blob/v0.15.0/cmd/nerdctl/login.go
-func loginClientSide(ctx context.Context, insecure bool, auth types.AuthConfig) (registrytypes.AuthenticateOKBody, error) {
+func loginClientSide(ctx context.Context, insecure bool, auth registrytypes.AuthConfig) (registrytypes.AuthenticateOKBody, error) {
 	var insecureRegistries []string
 	if insecure {
 		insecureRegistries = append(insecureRegistries, auth.ServerAddress)
@@ -59,7 +58,7 @@ func convertToHostname(serverAddress string) (string, error) {
 }
 
 // GetDefaultAuthConfig gets default auth config
-func GetDefaultAuthConfig(serverAddress, username, password string, isDefaultRegistry bool) (*types.AuthConfig, error) {
+func GetDefaultAuthConfig(serverAddress, username, password string, isDefaultRegistry bool) (*registrytypes.AuthConfig, error) {
 	if !isDefaultRegistry {
 		var err error
 		serverAddress, err = convertToHostname(serverAddress)
@@ -67,7 +66,7 @@ func GetDefaultAuthConfig(serverAddress, username, password string, isDefaultReg
 			return nil, err
 		}
 	}
-	res := types.AuthConfig(dockercliconfigtypes.AuthConfig{
+	res := registrytypes.AuthConfig(dockercliconfigtypes.AuthConfig{
 		ServerAddress: serverAddress,
 	})
 	if username != "" {
@@ -80,7 +79,7 @@ func GetDefaultAuthConfig(serverAddress, username, password string, isDefaultReg
 }
 
 // ConfigureAuthentication configures authentication for a registry
-func ConfigureAuthentication(authConfig *types.AuthConfig, username, password string) error {
+func ConfigureAuthentication(authConfig *registrytypes.AuthConfig, username, password string) error {
 	authConfig.Username = strings.TrimSpace(authConfig.Username)
 	if username = strings.TrimSpace(username); username == "" {
 		username = authConfig.Username
@@ -104,7 +103,7 @@ func LoginRepository(serverAddress, username, password string) error {
 
 	authConfig, err := GetDefaultAuthConfig(serverAddress, username, password, isDefaultRegistry)
 	if authConfig == nil {
-		authConfig = &types.AuthConfig{ServerAddress: serverAddress}
+		authConfig = &registrytypes.AuthConfig{ServerAddress: serverAddress}
 	}
 
 	if err == nil && authConfig.Username != "" && authConfig.Password != "" {

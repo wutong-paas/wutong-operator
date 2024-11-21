@@ -40,7 +40,7 @@ func MakeReadinessProbeTCP(host string, port int) *corev1.Probe {
 
 // MakeProbe -
 func MakeProbe(kind ProbeKind, host, path string, port int, scheme corev1.URIScheme, headers []corev1.HTTPHeader) *corev1.Probe {
-	handler := corev1.Handler{}
+	handler := corev1.ProbeHandler{}
 	switch kind {
 	case ProbeKindHTTP:
 		handler.HTTPGet = makeHTTPGetAction(host, path, port, scheme, headers)
@@ -49,7 +49,7 @@ func MakeProbe(kind ProbeKind, host, path string, port int, scheme corev1.URISch
 	default:
 		logrus.Warnf("do not support probe kind: %s", kind)
 	}
-	probe := &corev1.Probe{Handler: handler}
+	probe := &corev1.Probe{ProbeHandler: handler}
 	return probe
 }
 

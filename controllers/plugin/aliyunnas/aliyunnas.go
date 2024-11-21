@@ -129,7 +129,7 @@ func (p *aliyunnasPlugin) daemonset() *appsv1.DaemonSet {
 							Image:           path.Join(p.volume.Spec.ImageRepository, "csi-node-driver-registrar:v1.1.0"),
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Lifecycle: &corev1.Lifecycle{
-								PreStop: &corev1.Handler{
+								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{
 											"/bin/sh",
@@ -392,7 +392,7 @@ func (p *aliyunnasPlugin) statefulset() client.Object {
 								},
 							},
 							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									Exec: &corev1.ExecAction{Command: []string{"sh", "-c", "ps -ef | grep plugin.csi.alibabacloud.com | grep nasplugin.csi.alibabacloud.com | grep -v grep"}},
 								},
 								FailureThreshold:    8,
