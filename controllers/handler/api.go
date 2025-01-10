@@ -197,6 +197,12 @@ func (a *api) deployment() client.Object {
 	envs = mergeEnvs(envs, a.component.Spec.Env)
 	volumeMounts = mergeVolumeMounts(volumeMounts, a.component.Spec.VolumeMounts)
 	volumes = mergeVolumes(volumes, a.component.Spec.Volumes)
+	rt := k8sutil.GetContainerRuntime()
+	vs, vms := volumesByContainerRuntime(rt.Name, rt.Endpoint)
+	volumes = append(volumes, vs...)
+	volumeMounts = append(volumeMounts, vms...)
+	args = append(args, "--container-runtime="+rt.Name)
+	args = append(args, "--runtime-endpoint="+rt.Endpoint)
 
 	// prepare probe
 	readinessProbe := probeutil.MakeReadinessProbeHTTP("", "/v2/health", 8888)
