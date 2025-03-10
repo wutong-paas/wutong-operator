@@ -343,6 +343,7 @@ func (n *node) daemonSetForWutongNode() client.Object {
 
 	// prepare probe
 	readinessProbe := probeutil.MakeReadinessProbeHTTP("", "/v2/ping", 6100)
+	livenessProbe := probeutil.MakeLivenessProbeHTTP("", "/v2/ping", 6100)
 	startupProbe := probeutil.MakeProbe(probeutil.ProbeKindHTTP, "", "/v2/ping", 6100, corev1.URISchemeHTTP, nil)
 	probeutil.SetProbeArgs(startupProbe, 10, 10, 10, 1, 30)
 	args = mergeArgs(args, n.component.Spec.Args)
@@ -352,7 +353,7 @@ func (n *node) daemonSetForWutongNode() client.Object {
 		},
 	}
 
-	if n.component.Spec.Tolerations != nil && len(n.component.Spec.Tolerations) > 0 {
+	if len(n.component.Spec.Tolerations) > 0 {
 		tolerations = n.component.Spec.Tolerations
 	}
 	affinity := &corev1.Affinity{}
@@ -404,6 +405,7 @@ func (n *node) daemonSetForWutongNode() client.Object {
 							Args:            args,
 							VolumeMounts:    volumeMounts,
 							ReadinessProbe:  readinessProbe,
+							LivenessProbe:   livenessProbe,
 							StartupProbe:    startupProbe,
 							Resources:       resources,
 						},

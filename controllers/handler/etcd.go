@@ -129,7 +129,7 @@ func (e *etcd) statefulsetForEtcd() client.Object {
 		},
 	}
 
-	if e.component.Spec.Tolerations != nil && len(e.component.Spec.Tolerations) > 0 {
+	if len(e.component.Spec.Tolerations) > 0 {
 		tolerations = e.component.Spec.Tolerations
 	}
 	affinity := &corev1.Affinity{}

@@ -230,7 +230,7 @@ func (d *db) statefulsetForDB() client.Object {
 		},
 	}
 
-	if d.component.Spec.Tolerations != nil && len(d.component.Spec.Tolerations) > 0 {
+	if len(d.component.Spec.Tolerations) > 0 {
 		tolerations = d.component.Spec.Tolerations
 	}
 	affinity := &corev1.Affinity{}
