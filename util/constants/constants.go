@@ -74,7 +74,7 @@ const (
 	InstallImageRepo = "swr.cn-southwest-2.myhuaweicloud.com/wutong"
 
 	// DefaultInstallVersion default install version
-	DefaultInstallVersion = "v1.16.1"
+	DefaultInstallVersion = "v2.0.0"
 
 	WutongPlatformComponentPriorityClassName = "wutong-platform-component"
 )
