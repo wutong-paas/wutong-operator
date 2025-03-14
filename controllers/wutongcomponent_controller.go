@@ -31,10 +31,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
-	componentmgr "github.com/wutong-paas/wutong-operator/controllers/component-mgr"
-	chandler "github.com/wutong-paas/wutong-operator/controllers/handler"
-	"github.com/wutong-paas/wutong-operator/util/constants"
+	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/v2/api/v1alpha1"
+	componentmgr "github.com/wutong-paas/wutong-operator/v2/controllers/component-mgr"
+	chandler "github.com/wutong-paas/wutong-operator/v2/controllers/handler"
+	"github.com/wutong-paas/wutong-operator/v2/util/constants"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )

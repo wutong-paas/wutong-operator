@@ -7,8 +7,8 @@ import (
 	"time"
 
 	dclient "github.com/docker/docker/client"
-	"github.com/wutong-paas/wutong-operator/util/constants"
-	"github.com/wutong-paas/wutong-operator/util/k8sutil"
+	"github.com/wutong-paas/wutong-operator/v2/util/constants"
+	"github.com/wutong-paas/wutong-operator/v2/util/k8sutil"
 )
 
 // LogCollectRequest define info which should be collect

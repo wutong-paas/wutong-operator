@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/wutong-paas/wutong-operator/util/k8sutil"
-	"github.com/wutong-paas/wutong-operator/util/wtutil"
+	"github.com/wutong-paas/wutong-operator/v2/util/k8sutil"
+	"github.com/wutong-paas/wutong-operator/v2/util/wtutil"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 
-	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
-	"github.com/wutong-paas/wutong-operator/util/commonutil"
-	"github.com/wutong-paas/wutong-operator/util/probeutil"
+	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/v2/api/v1alpha1"
+	"github.com/wutong-paas/wutong-operator/v2/util/commonutil"
+	"github.com/wutong-paas/wutong-operator/v2/util/probeutil"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"

@@ -35,12 +35,12 @@ package controllers
 // 	"github.com/containerd/containerd/remotes/docker/config"
 // 	dtypes "github.com/docker/docker/api/types"
 // 	"github.com/go-logr/logr"
-// 	"github.com/wutong-paas/wutong-operator/util/commonutil"
-// 	"github.com/wutong-paas/wutong-operator/util/constants"
-// 	"github.com/wutong-paas/wutong-operator/util/downloadutil"
-// 	initcontainerd "github.com/wutong-paas/wutong-operator/util/init-containerd"
-// 	"github.com/wutong-paas/wutong-operator/util/retryutil"
-// 	"github.com/wutong-paas/wutong-operator/util/tarutil"
+// 	"github.com/wutong-paas/wutong-operator/v2/util/commonutil"
+// 	"github.com/wutong-paas/wutong-operator/v2/util/constants"
+// 	"github.com/wutong-paas/wutong-operator/v2/util/downloadutil"
+// 	initcontainerd "github.com/wutong-paas/wutong-operator/v2/util/init-containerd"
+// 	"github.com/wutong-paas/wutong-operator/v2/util/retryutil"
+// 	"github.com/wutong-paas/wutong-operator/v2/util/tarutil"
 // 	corev1 "k8s.io/api/core/v1"
 // 	"k8s.io/apimachinery/pkg/api/errors"
 // 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +52,7 @@ package controllers
 // 	"sigs.k8s.io/controller-runtime/pkg/client"
 // 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-// 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
+// 	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/v2/api/v1alpha1"
 // )
 
 // var errorClusterConfigNotReady = fmt.Errorf("cluster config can not be ready")

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
-	"github.com/wutong-paas/wutong-operator/util/commonutil"
-	"github.com/wutong-paas/wutong-operator/util/k8sutil"
+	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/v2/api/v1alpha1"
+	"github.com/wutong-paas/wutong-operator/v2/util/commonutil"
+	"github.com/wutong-paas/wutong-operator/v2/util/k8sutil"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

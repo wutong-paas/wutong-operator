@@ -5,9 +5,9 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
-	"github.com/wutong-paas/wutong-operator/controllers/cluster-mgr/precheck"
 	"github.com/stretchr/testify/assert"
+	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/v2/api/v1alpha1"
+	"github.com/wutong-paas/wutong-operator/v2/controllers/cluster-mgr/precheck"
 	corev1 "k8s.io/api/core/v1"
 )
 

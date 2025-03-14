@@ -6,7 +6,7 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
-	"github.com/wutong-paas/wutong-operator/util/k8sutil"
+	"github.com/wutong-paas/wutong-operator/v2/util/k8sutil"
 )
 
 const ()

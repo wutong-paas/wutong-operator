@@ -1,4 +1,4 @@
-module github.com/wutong-paas/wutong-operator
+module github.com/wutong-paas/wutong-operator/v2
 
 go 1.23.2
 

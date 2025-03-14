@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wutong-paas/wutong-operator/util/constants"
-	"github.com/wutong-paas/wutong-operator/util/repositoryutil"
-	"github.com/wutong-paas/wutong-operator/util/wtutil"
+	"github.com/wutong-paas/wutong-operator/v2/util/constants"
+	"github.com/wutong-paas/wutong-operator/v2/util/repositoryutil"
+	"github.com/wutong-paas/wutong-operator/v2/util/wtutil"
 
 	"github.com/go-logr/logr"
-	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
+	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/v2/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

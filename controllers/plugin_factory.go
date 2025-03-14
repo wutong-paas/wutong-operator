@@ -4,15 +4,15 @@ import (
 	"context"
 	"errors"
 
-	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/api/v1alpha1"
-	"github.com/wutong-paas/wutong-operator/controllers/plugin"
-	"github.com/wutong-paas/wutong-operator/controllers/plugin/aliyunclouddisk"
-	"github.com/wutong-paas/wutong-operator/controllers/plugin/aliyunnas"
-	"github.com/wutong-paas/wutong-operator/controllers/plugin/nfs"
+	wutongv1alpha1 "github.com/wutong-paas/wutong-operator/v2/api/v1alpha1"
+	"github.com/wutong-paas/wutong-operator/v2/controllers/plugin"
+	"github.com/wutong-paas/wutong-operator/v2/controllers/plugin/aliyunclouddisk"
+	"github.com/wutong-paas/wutong-operator/v2/controllers/plugin/aliyunnas"
+	"github.com/wutong-paas/wutong-operator/v2/controllers/plugin/nfs"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//NewCSIPlugin creates a new csi plugin
+// NewCSIPlugin creates a new csi plugin
 func NewCSIPlugin(ctx context.Context, cli client.Client, volume *wutongv1alpha1.WutongVolume) (plugin.CSIPlugin, error) {
 	cp := volume.Spec.CSIPlugin
 	var p plugin.CSIPlugin
